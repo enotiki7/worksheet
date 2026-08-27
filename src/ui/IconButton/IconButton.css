@@ -1,0 +1,22 @@
+.ui-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius-8);
+  background: transparent;
+  cursor: pointer;
+}
+
+.ui-icon-button:hover {
+  background: var(--bg-secondary);
+}
+
+.ui-icon-button img,
+.ui-icon-button .ws-icon {
+  width: 20px;
+  height: 20px;
+}

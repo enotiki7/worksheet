@@ -1,0 +1,73 @@
+---
+description: Working with Figma designs through Figma MCP
+alwaysApply: true
+---
+
+# Figma workflow
+
+The UI Kit library is **❖ SberUm UI**:
+https://www.figma.com/design/3sLyD0uikSYhlQMoyMCRdV/✦-SberUm-UI
+
+When mapping a product frame to code, look up components and variables in that library first (`search_design_system` with that file, scoped to its libraryKey).
+
+When a Figma frame or selection is provided, inspect it through Figma MCP before implementing it.
+
+Do not infer the design from a screenshot if structured Figma context is available.
+
+Before implementation extract:
+
+- frame hierarchy;
+- layout structure;
+- Auto Layout behavior;
+- component instances;
+- component properties;
+- variants;
+- variables;
+- typography;
+- spacing;
+- assets;
+- repeated patterns.
+
+# Design interpretation
+
+Figma is the visual source of truth.
+
+❖ SberUm UI is the component implementation source of truth.
+
+Therefore:
+
+Figma answers:
+"What should this experience look like?"
+
+UI Kit answers:
+"How should this component be implemented?"
+
+# Conflicts
+
+If Figma and the UI Kit disagree:
+
+do not silently resolve the discrepancy.
+
+Prefer the existing UI Kit implementation for shared component behavior and report the mismatch.
+
+# Implementation plan
+
+Before writing code, provide a short mapping:
+
+Figma → UI Kit
+
+Example:
+
+Button / Primary / Medium
+→ Button variant="primary" size="md"
+
+Input / Default
+→ Input
+
+Modal
+→ Modal
+
+Avatar
+→ Avatar
+
+Then implement the prototype.

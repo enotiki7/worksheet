@@ -1,0 +1,76 @@
+---
+description: Design system and UI Kit rules
+alwaysApply: true
+---
+
+# Design system
+
+The Figma source of truth is **❖ SberUm UI**.
+
+Source file:
+https://www.figma.com/design/3sLyD0uikSYhlQMoyMCRdV/✦-SberUm-UI
+
+fileKey: `3sLyD0uikSYhlQMoyMCRdV`
+
+libraryKey:
+`lk-b9c844e51f28ab5af108f9e787e2e2be0af12babcadc2e29824c3edb52e219075512780fb225f8186cba479333c81940303017778bbbf273b63f4291320c7149`
+
+Always pull tokens and components from this file via MCP (`search_design_system` scoped with `includeLibraryKeys`, `get_variable_defs`, `get_design_context`). Do not invent tokens. Do not use any other UI kit.
+
+Before implementing UI:
+
+1. identify the UI Kit components used in the referenced Figma design;
+2. identify their variants and properties;
+3. identify relevant design tokens / Figma variables;
+4. map the Figma components to the closest existing code equivalents.
+
+# Component reuse
+
+Always use an existing UI Kit component when an equivalent component exists.
+
+Do NOT recreate existing UI Kit components with:
+- raw HTML;
+- custom CSS;
+- Tailwind utility combinations;
+- local components.
+
+# Tokens
+
+Never invent:
+
+- colors;
+- spacing;
+- typography;
+- border radii;
+- shadows;
+- breakpoints.
+
+Use existing design tokens.
+
+Do not use hardcoded visual values when an equivalent design token exists.
+
+# Missing components
+
+If the Figma design contains something that does not exist in the kit:
+
+1. identify the missing component;
+2. identify the closest existing SberUm UI component;
+3. use the closest component if the difference is insignificant for the prototype;
+4. otherwise create a one-off in the prototype `components/` folder.
+
+Never add one-offs to a shared kit.
+
+# Variants
+
+Respect Figma component properties.
+
+For example:
+
+Figma:
+Button
+- type: primary
+- size: medium
+- state: default
+
+Code:
+`<Button variant="primary" size="medium">`

@@ -1,0 +1,72 @@
+---
+description: Rules for interactive prototypes
+alwaysApply: true
+---
+
+# Interaction design
+
+When building prototypes, implement the interaction rather than only reproducing static screens.
+
+Buttons should work.
+
+Navigation should work.
+
+Dialogs should open and close.
+
+Menus should open.
+
+Forms should accept input.
+
+Validation should be demonstrable.
+
+Loading should be demonstrable.
+
+Error scenarios should be demonstrable.
+
+# Fake backend
+
+Use deterministic mock behavior where possible.
+
+Example:
+
+valid@example.com
+→ success
+
+error@example.com
+→ server error
+
+taken@example.com
+→ already exists
+
+This allows a designer or researcher to reproduce scenarios during testing.
+
+# Timing
+
+Short artificial loading states may be used to simulate real product behavior.
+
+Prefer approximately:
+
+300–800 ms
+
+unless the prompt specifies otherwise.
+
+# Navigation
+
+Keep navigation simple.
+
+Prefer:
+- React Router;
+- local state for small flows;
+- URL parameters when they make prototype scenarios easier to share.
+
+# Prototype controls
+
+When useful, expose prototype-only controls for:
+
+- scenario;
+- user role;
+- account state;
+- feature flag;
+- loading/error state.
+
+Prototype controls must not visually interfere with the actual product UI.

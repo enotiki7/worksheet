@@ -1,0 +1,31 @@
+.ui-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-medium);
+  cursor: pointer;
+}
+
+.ui-checkbox__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.ui-checkbox__box {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-4);
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.ui-checkbox__box.is-on {
+  background: var(--bg-brand);
+}
+
+.ui-checkbox__label {
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--text-default);
+}

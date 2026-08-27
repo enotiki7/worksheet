@@ -1,0 +1,59 @@
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: var(--pad-tb) var(--pad-lr);
+  border: none;
+  border-radius: var(--radius-8);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.ui-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ui-button--brand {
+  background: var(--bg-brand);
+  color: var(--text-inverse);
+}
+
+.ui-button--secondary {
+  background: var(--bg-secondary);
+  color: var(--text-default);
+}
+
+.ui-button--ghost {
+  background: transparent;
+  color: var(--text-default);
+  padding: 10px;
+}
+
+.ui-button__icon {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+}
+
+.ui-button__icon img {
+  width: 100%;
+  height: 100%;
+}
+
+.ui-button__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ui-button--secondary.ui-button:has(.ui-button__icon) {
+  padding-left: 10px;
+  padding-right: 14px;
+}

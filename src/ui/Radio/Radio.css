@@ -1,0 +1,33 @@
+.ui-radio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-medium);
+  cursor: pointer;
+}
+
+.ui-radio__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.ui-radio__empty {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-pill);
+  background: var(--bg-white);
+}
+
+.ui-radio__mark {
+  width: 20px;
+  height: 20px;
+}
+
+.ui-radio__label {
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--text-default);
+}

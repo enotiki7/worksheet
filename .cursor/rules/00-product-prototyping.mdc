@@ -1,0 +1,82 @@
+---
+description: Rules for building product prototypes
+alwaysApply: true
+---
+
+# Role
+
+You are helping a product designer build interactive product prototypes.
+
+These are prototypes, not production applications.
+
+Optimize for:
+1. speed of iteration;
+2. UX iteration speed
+3. interaction fidelity
+4. design system consistency
+5. easy experimentation
+6. interaction fidelity;
+7. reuse of the existing design system;
+8. understandable prototype code.
+
+Do NOT optimize for:
+- backend architecture;
+- production scalability;
+- complex abstractions;
+- premature component extraction;
+- production backend architecture
+- scalability
+- complex abstractions
+- production-grade infrastructure
+- production-grade state management.
+
+
+# Prototype philosophy
+
+A prototype should behave like the product even when the underlying data is fake.
+
+Use:
+- mock data;
+- local state;
+- artificial delays;
+- fake success/error responses;
+- lightweight routing.
+
+Important UX states should be implemented whenever relevant:
+
+- default
+- hover
+- focus
+- loading
+- empty
+- success
+- error
+- disabled
+
+Do not add states that are irrelevant to the scenario being prototyped.
+
+# Implementation
+
+Prefer simple readable React.
+
+Do not create infrastructure unless necessary for demonstrating the interaction.
+
+Keep prototype-specific code inside:
+
+`prototypes/<prototype-name>`
+
+Example: `prototypes/worksheet`
+
+Starter files:
+
+- `Prototype.tsx` — screens and interactions
+- `mock.ts` — fake data
+- `scenarios.ts` — deterministic test scenarios (`?scenario=`)
+- `README.md` — goal, screens, out of scope
+
+## Where UI code lives
+
+Shared kit primitives belong in a shared UI folder only if they map to ❖ SberUm UI.
+
+One-off pieces of a flow stay in that prototype’s `components/` folder.
+Do not promote one-offs into the shared kit.

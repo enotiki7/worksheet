@@ -1,0 +1,30 @@
+.ui-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 26, 51, 0.4);
+}
+
+.ui-dialog {
+  width: 360px;
+  padding: 16px;
+  border-radius: var(--radius-12);
+  background: var(--bg-white);
+  box-shadow: var(--shadow-elevated);
+}
+
+.ui-dialog__title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: var(--weight-medium);
+  line-height: 24px;
+}
+
+.ui-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

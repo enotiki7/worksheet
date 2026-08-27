@@ -1,0 +1,16 @@
+.ui-toast {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: 420px;
+  padding: 12px 16px;
+  border-radius: var(--radius-8);
+  background: var(--text-default);
+  color: var(--text-inverse);
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+  line-height: 20px;
+  box-shadow: var(--shadow-elevated);
+}
