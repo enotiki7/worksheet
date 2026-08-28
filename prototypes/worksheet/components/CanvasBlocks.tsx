@@ -7,6 +7,7 @@ import graph3 from "../assets/graph-3.png";
 import graph4 from "../assets/graph-4.png";
 import { Icon } from "./Icon";
 import { Wysiwyg } from "./Wysiwyg";
+import { BlanksEditor, type BlankRange } from "./BlanksEditor";
 
 export type CanvasBlockKind =
   | "text"
@@ -32,7 +33,7 @@ export type CanvasBlock = {
   items?: string[];
   columns?: string[];
   rows?: string[][];
-  words?: string[];
+  blanks?: BlankRange[];
   difficulty: 0 | 1 | 2 | 3;
 };
 
@@ -69,8 +70,12 @@ export const GENERATED_BLOCKS: CanvasBlock[] = [
     id: "generated-blanks",
     kind: "blanks",
     prompt: "Приведите линейное уравнение к виду y = kx + b, заполнив пропуски:",
-    text: "2x + 3y − 6 = 0\n3y = ___________\ny = _____ x + _____",
-    words: [],
+    text: "2x + 3y − 6 = 0\n3y = −2x + 6\ny = −2/3 x + 2",
+    blanks: [
+      { id: "generated-blank-1", start: 21, end: 28, text: "−2x + 6" },
+      { id: "generated-blank-2", start: 33, end: 37, text: "−2/3" },
+      { id: "generated-blank-3", start: 42, end: 43, text: "2" },
+    ],
     difficulty: 0,
   },
 ];
@@ -98,9 +103,9 @@ export function createCanvasBlock(kind: CanvasBlockKind): CanvasBlock {
     case "blanks":
       return {
         ...base,
-        prompt: "Заполни пропущенный текст",
-        text: "Текст с пропусками",
-        words: [],
+        prompt: "",
+        text: "",
+        blanks: [],
       };
     case "media":
       return { ...base };
@@ -179,7 +184,7 @@ export function CanvasBlockView(props: BlockProps) {
         selected && editing ? "is-selected" : "",
       ].filter(Boolean).join(" ")}
       onClick={activate}
-      draggable={editing}
+      draggable={editing && !(block.kind === "blanks" && selected)}
       onDragStart={(event) => {
         event.stopPropagation();
         props.onDragStart();
@@ -400,11 +405,12 @@ function BlockBody(props: BlockProps) {
   if (block.kind === "blanks") {
     return (
       <div className="canvas-blanks">
-        <EditableText
-          value={block.text ?? ""}
-          editing={editable}
-          placeholder="Текст с пропусками"
-          onChange={(text) => onChange({ ...block, text })}
+        <BlanksEditor
+          text={block.text ?? ""}
+          blanks={block.blanks ?? []}
+          active={editable}
+          showAnswers={showAnswers}
+          onChange={(text, blanks) => onChange({ ...block, text, blanks })}
         />
       </div>
     );

@@ -1,0 +1,81 @@
+.blanks-editor {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text-default);
+  font-size: 14px;
+  font-weight: var(--weight-regular);
+  line-height: 20px;
+}
+
+.blanks-editor__text {
+  width: 100%;
+  min-height: 20px;
+  margin: 0;
+  padding: 8px 24px 0 32px;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.blanks-editor__text[contenteditable]:empty::before {
+  color: var(--text-secondary);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.blanks-editor__text.is-placeholder {
+  color: var(--text-secondary);
+}
+
+.blanks-editor__blank.is-active {
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.blanks-editor__blank.is-answer {
+  background: transparent;
+  color: var(--text-positive);
+}
+
+.blanks-editor__words {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 32px 16px;
+}
+
+.blanks-editor__words > span {
+  color: var(--text-secondary);
+}
+
+.blanks-editor__words button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-default);
+  cursor: pointer;
+  font: inherit;
+}
+
+.blanks-editor__words button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.blanks-editor__words button.is-selected {
+  color: var(--text-brand);
+}
+
+.blanks-editor__action.ui-button {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, -100%);
+  box-shadow: var(--shadow-popover);
+}
