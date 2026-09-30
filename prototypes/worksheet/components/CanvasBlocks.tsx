@@ -1,5 +1,4 @@
-import { Checkbox, Radio } from "@company/ui";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import graph1 from "../assets/graph-1.png";
 import graph2 from "../assets/graph-2.png";
@@ -8,6 +7,18 @@ import graph4 from "../assets/graph-4.png";
 import { Icon } from "./Icon";
 import { Wysiwyg } from "./Wysiwyg";
 import { BlanksEditor, type BlankRange } from "./BlanksEditor";
+import { AnswerInput } from "./AnswerInput";
+import { ChoiceOptions, createChoiceOptions } from "./ChoiceOptions";
+import { EditableText } from "./EditableText";
+import type { ChoiceAnswerType, ChoiceOption, TextAnswerType } from "../types";
+import {
+  TEXT_BLOCK_CHAR_LIMIT,
+  getTextGroupId,
+  getTextSegmentVisualRole,
+  getTotalTextLength,
+  isActiveTextSegment,
+  isTextGroupSelected,
+} from "../utils/textBlockGroups";
 
 export type CanvasBlockKind =
   | "text"
@@ -22,18 +33,27 @@ export type CanvasBlockKind =
   | "media"
   | "pagebreak";
 
+export type PagebreakSource = "manual" | "auto";
+
 export type CanvasBlock = {
   id: string;
   kind: CanvasBlockKind;
   prompt: string;
+  pagebreakSource?: PagebreakSource;
   text?: string;
   answer?: string;
-  options?: string[];
+  answerType?: TextAnswerType;
+  blockHeight?: number;
+  choiceAnswerType?: ChoiceAnswerType;
+  shuffleOptions?: boolean;
+  options?: ChoiceOption[];
   pairs?: Array<[string, string]>;
   items?: string[];
   columns?: string[];
   rows?: string[][];
   blanks?: BlankRange[];
+  textGroupId?: string;
+  textSegmentIndex?: number;
   difficulty: 0 | 1 | 2 | 3;
 };
 
@@ -45,7 +65,14 @@ export const GENERATED_BLOCKS: CanvasBlock[] = [
     id: "generated-choice",
     kind: "multi",
     prompt: "Какие из точек принадлежат графику уравнения x − 2y + 4 = 0?",
-    options: ["A(0; 2)", "B(2; 3)", "C(−4; 0)", "D(4; 0)"],
+    choiceAnswerType: "Текст",
+    shuffleOptions: true,
+    options: [
+      { id: "generated-opt-1", text: "A(0; 2)", correct: true },
+      { id: "generated-opt-2", text: "B(2; 3)", correct: true },
+      { id: "generated-opt-3", text: "C(−4; 0)", correct: false },
+      { id: "generated-opt-4", text: "D(4; 0)", correct: false },
+    ],
     difficulty: 0,
   },
   {
@@ -81,36 +108,40 @@ export const GENERATED_BLOCKS: CanvasBlock[] = [
 ];
 
 export function createCanvasBlock(kind: CanvasBlockKind): CanvasBlock {
-  const base = { id: nextId(), kind, prompt: "Введите текст", difficulty: 0 as const };
+  const base = { id: nextId(), kind, prompt: "", difficulty: 0 as const };
   switch (kind) {
     case "text":
-      return { ...base, prompt: "", text: "" };
+      return { ...base, text: "", textGroupId: base.id, textSegmentIndex: 0 };
     case "answer":
-      return { ...base, answer: "" };
+      return { ...base, answer: "", answerType: "Линии", blockHeight: 2 };
     case "single":
     case "multi":
-      return { ...base, options: ["Ответ", "Ответ", "Ответ", "Ответ"] };
+      return {
+        ...base,
+        choiceAnswerType: "Текст",
+        shuffleOptions: true,
+        options: createChoiceOptions(kind),
+      };
     case "match":
-      return { ...base, pairs: [["Ответ", "Ответ"], ["Ответ", "Ответ"], ["Ответ", "Ответ"]] };
+      return { ...base, pairs: [["", ""], ["", ""], ["", ""]] };
     case "order":
-      return { ...base, items: ["Текст", "Текст", "Текст", "Текст", "Текст"] };
+      return { ...base, items: ["", "", "", "", ""] };
     case "table":
       return {
         ...base,
-        columns: ["Название группы", "Название группы", "Название группы"],
+        columns: ["", "", ""],
         rows: Array.from({ length: 4 }, () => ["", "", ""]),
       };
     case "blanks":
       return {
         ...base,
-        prompt: "",
         text: "",
         blanks: [],
       };
     case "media":
       return { ...base };
     case "pagebreak":
-      return { ...base, prompt: "" };
+      return { ...base, pagebreakSource: "manual" };
     default:
       return base;
   }
@@ -118,9 +149,10 @@ export function createCanvasBlock(kind: CanvasBlockKind): CanvasBlock {
 
 type BlockProps = {
   block: CanvasBlock;
+  allBlocks: CanvasBlock[];
   number: number;
   editing: boolean;
-  selected: boolean;
+  selectedBlockId: string | null;
   showAnswers: boolean;
   showDifficulty: boolean;
   onSelect: () => void;
@@ -151,27 +183,71 @@ function BlockChrome(props: {
   );
 }
 
+function PageBreakChrome(props: { onDelete: () => void }) {
+  return (
+    <div className="canvas-block__chrome canvas-block__actions">
+      <button
+        type="button"
+        aria-label="Удалить"
+        onClick={(event) => {
+          event.stopPropagation();
+          props.onDelete();
+        }}
+      >
+        <Icon name="trash" size={16} />
+      </button>
+    </div>
+  );
+}
+
 export function CanvasBlockView(props: BlockProps) {
-  const { block, editing, selected } = props;
+  const { block, allBlocks, editing, selectedBlockId } = props;
   const activate = (event: MouseEvent) => {
     event.stopPropagation();
     if (!editing) props.onEnterEdit?.();
     props.onSelect();
   };
 
+  const isTextBlock = block.kind === "text";
+  const isActiveSegment = isTextBlock ? isActiveTextSegment(allBlocks, block) : false;
+  const textGroupId = isTextBlock ? getTextGroupId(block) : null;
+  const textRole = isTextBlock ? getTextSegmentVisualRole(allBlocks, block) : null;
+  const groupSelected = Boolean(
+    textGroupId && isTextGroupSelected(allBlocks, textGroupId, selectedBlockId),
+  );
+  const selected = isTextBlock ? groupSelected : block.id === selectedBlockId;
+  const otherSegmentsLength = textGroupId
+    ? getTotalTextLength(allBlocks, textGroupId) - (block.text?.length ?? 0)
+    : 0;
+  const textCharBudget = TEXT_BLOCK_CHAR_LIMIT - otherSegmentsLength;
+  const showWidgetChrome = isTextBlock
+    ? editing && groupSelected && Boolean(textRole?.isFirst)
+    : editing && block.id === selectedBlockId;
+  const textWidgetClasses = textRole ? [
+    textRole.isFirst && textRole.isLast ? "is-text-widget-only" : "",
+    textRole.isFirst && !textRole.isLast ? "is-text-widget-start" : "",
+    !textRole.isFirst ? "is-text-widget-continue" : "",
+    textRole.continuesToNextPage ? "is-text-widget-overflow" : "",
+    groupSelected && editing ? "is-text-group-selected" : "",
+  ].filter(Boolean) : [];
+
   if (block.kind === "pagebreak") {
     return (
       <div
         className={[
           "canvas-pagebreak",
-          selected && editing ? "is-selected" : "",
+          block.id === selectedBlockId && editing ? "is-selected" : "",
         ].filter(Boolean).join(" ")}
+        role="separator"
+        aria-label="Разрыв страницы"
         onClick={activate}
         draggable={editing}
-        onDragStart={props.onDragStart}
+        onDragStart={(event) => {
+          event.stopPropagation();
+          props.onDragStart();
+        }}
       >
-        {editing && selected ? <BlockChrome onMove={props.onMove} onDuplicate={props.onDuplicate} onDelete={props.onDelete} /> : null}
-        <span>Разрыв страницы</span>
+        {editing && selected ? <PageBreakChrome onDelete={props.onDelete} /> : null}
       </div>
     );
   }
@@ -181,16 +257,21 @@ export function CanvasBlockView(props: BlockProps) {
       className={[
         "canvas-block",
         `canvas-block--${block.kind}`,
-        selected && editing ? "is-selected" : "",
+        ...textWidgetClasses,
+        selected && editing && !isTextBlock ? "is-selected" : "",
       ].filter(Boolean).join(" ")}
       onClick={activate}
-      draggable={editing && !(block.kind === "blanks" && selected)}
+      draggable={
+        editing
+        && (!isTextBlock || Boolean(textRole?.isFirst))
+        && !(block.kind === "blanks" && selected)
+      }
       onDragStart={(event) => {
         event.stopPropagation();
         props.onDragStart();
       }}
     >
-      {editing && selected ? (
+      {showWidgetChrome ? (
         <>
           <Wysiwyg onUnsupported={() => undefined} />
           <BlockChrome onMove={props.onMove} onDuplicate={props.onDuplicate} onDelete={props.onDelete} />
@@ -201,9 +282,11 @@ export function CanvasBlockView(props: BlockProps) {
         <EditableText
           className="canvas-text-block"
           value={block.text ?? ""}
-          editing={editing && selected}
-          placeholder=""
-          onChange={(text) => props.onChange({ ...block, text })}
+          editing={editing && groupSelected && isActiveSegment}
+          readOnly={editing && (!groupSelected || !isActiveSegment)}
+          placeholder="Введите текст"
+          maxLength={textCharBudget}
+          onChange={(text) => props.onChange({ ...block, text: text.slice(0, textCharBudget) })}
         />
       ) : (
         <>
@@ -267,40 +350,37 @@ function Question({
 }
 
 function BlockBody(props: BlockProps) {
-  const { block, editing, selected, showAnswers, onChange } = props;
+  const { block, editing, selectedBlockId, showAnswers, onChange } = props;
+  const selected = block.id === selectedBlockId;
   const editable = editing && selected;
 
   if (block.kind === "answer") {
+    const promptEditing = editing && selected;
     return (
-      <div className="canvas-answer">
-        {showAnswers && block.answer ? <p>{block.answer}</p> : null}
-        <i /><i /><i />
-      </div>
+      <AnswerInput
+        answerType={block.answerType ?? "Линии"}
+        blockHeight={block.blockHeight ?? 2}
+        value={block.answer ?? ""}
+        onChange={(answer) => onChange({ ...block, answer })}
+        interactive={!promptEditing}
+        showAnswer={showAnswers}
+        persistChanges={editing}
+      />
     );
   }
 
   if (block.kind === "single" || block.kind === "multi") {
     return (
-      <div className="canvas-choice">
-        {(block.options ?? []).map((option, index) => (
-          <div key={index}>
-            {block.kind === "single" ? (
-              <Radio name={block.id} checked={showAnswers && index === 0} onChange={() => undefined} />
-            ) : (
-              <Checkbox checked={showAnswers && index < 2} onChange={() => undefined} />
-            )}
-            <EditableText
-              value={option}
-              editing={editable}
-              placeholder="Ответ"
-              onChange={(value) => onChange({
-                ...block,
-                options: block.options?.map((item, optionIndex) => optionIndex === index ? value : item),
-              })}
-            />
-          </div>
-        ))}
-      </div>
+      <ChoiceOptions
+        kind={block.kind}
+        choiceAnswerType={block.choiceAnswerType ?? "Текст"}
+        options={block.options ?? []}
+        editable={editable}
+        showAnswers={showAnswers}
+        shuffleOptions={block.shuffleOptions ?? true}
+        blockId={block.id}
+        onChange={(options) => onChange({ ...block, options })}
+      />
     );
   }
 
@@ -425,53 +505,6 @@ function BlockBody(props: BlockProps) {
   }
 
   return null;
-}
-
-function adjustTextareaHeight(element: HTMLTextAreaElement) {
-  element.style.height = "auto";
-  const styles = window.getComputedStyle(element);
-  // scrollHeight excludes borders, but border-box height must include them
-  const borders = styles.boxSizing === "border-box"
-    ? parseFloat(styles.borderTopWidth) + parseFloat(styles.borderBottomWidth)
-    : 0;
-  element.style.height = `${element.scrollHeight + borders}px`;
-}
-
-function EditableText({
-  value,
-  editing,
-  placeholder,
-  onChange,
-  className,
-}: {
-  value: string;
-  editing: boolean;
-  placeholder: string;
-  onChange: (value: string) => void;
-  className?: string;
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useLayoutEffect(() => {
-    if (!editing || !textareaRef.current) return;
-    adjustTextareaHeight(textareaRef.current);
-  }, [editing, value]);
-
-  if (editing) {
-    return (
-      <textarea
-        ref={textareaRef}
-        className={className}
-        value={value}
-        rows={1}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        onInput={(event) => adjustTextareaHeight(event.currentTarget)}
-      />
-    );
-  }
-  // keeps an empty paragraph one line tall, so selecting a block never changes its height
-  return <p className={className}>{value || placeholder || "\u00a0"}</p>;
 }
 
 export function CanvasDropZone({

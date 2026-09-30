@@ -85,6 +85,11 @@
   cursor: pointer;
 }
 
-.ui-select__option:hover {
+.ui-select__option:hover:not(:disabled) {
   background: var(--bg-secondary);
+}
+
+.ui-select__option:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
 }

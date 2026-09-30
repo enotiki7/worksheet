@@ -5,6 +5,7 @@ import "./Select.css";
 export type SelectOption = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 type SelectProps = {
@@ -57,7 +58,9 @@ export function Select({ label, value, placeholder, options, onChange }: SelectP
               <button
                 type="button"
                 className="ui-select__option"
+                disabled={option.disabled}
                 onClick={() => {
+                  if (option.disabled) return;
                   onChange(option.value);
                   setOpen(false);
                 }}

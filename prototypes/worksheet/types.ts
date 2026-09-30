@@ -22,6 +22,7 @@ export type ChoiceOption = {
   id: string;
   text: string;
   correct: boolean;
+  imageUrl?: string;
 };
 
 export type MatchPair = {

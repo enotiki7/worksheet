@@ -14,14 +14,25 @@ import {
   createCanvasBlock,
   type CanvasBlock,
   type CanvasBlockKind,
+  type PagebreakSource,
 } from "./components/CanvasBlocks";
+import { nextOptionId } from "./components/ChoiceOptions";
+import { CHOICE_ANSWER_TYPES } from "./types";
+import {
+  deleteTextGroup,
+  duplicateTextGroup,
+  getActiveTextSegment,
+  getTextGroupId,
+  getTextGroupSegments,
+  moveTextGroupBlockRange,
+  moveTextGroupByStep,
+} from "./utils/textBlockGroups";
+import { rebalanceAllTextGroups } from "./utils/textBlockSplit";
+import { createAutoPagebreak, normalizePages, tryMergeAutoPages } from "./utils/pageStructure";
+import { HomeScreen } from "./HomeScreen";
 import editIcon from "./assets/header-edit.svg";
 import moreIcon from "./assets/header-more.svg";
 import printIcon from "./assets/header-print.svg";
-import homeMotivation from "./assets/home-motivation.png";
-import homePresentation from "./assets/home-presentation.png";
-import homeTask from "./assets/home-task.png";
-import homeWorksheet from "./assets/home-worksheet.png";
 import needBiggerScreen from "./assets/need-bigger-screen.png";
 import pageDeleteIcon from "./assets/page-delete.svg";
 import thumbDown from "./assets/thumb-down.svg";
@@ -72,13 +83,26 @@ function taskNumberAt(blocks: CanvasBlock[], index: number) {
     .length;
 }
 
-function insertPagebreakBefore(blocks: CanvasBlock[], blockId: string): CanvasBlock[] | null {
+function insertPagebreakBefore(
+  blocks: CanvasBlock[],
+  blockId: string,
+  source: PagebreakSource,
+): CanvasBlock[] | null {
   const index = blocks.findIndex((block) => block.id === blockId);
   if (index <= 0) return null;
   if (blocks[index - 1]?.kind === "pagebreak") return null;
   const next = [...blocks];
-  next.splice(index, 0, createCanvasBlock("pagebreak"));
+  const pagebreak = source === "auto"
+    ? createAutoPagebreak()
+    : createCanvasBlock("pagebreak");
+  next.splice(index, 0, pagebreak);
   return next;
+}
+
+function insertIndexAfterPage(blocks: CanvasBlock[], pages: SheetPage[], pageIndex: number): number {
+  const page = pages[pageIndex];
+  if (page.indices.length) return page.indices.at(-1)! + 1;
+  return pageDropStartIndex(blocks, pages, pageIndex);
 }
 
 function pagebreakIndexAfterPage(blocks: CanvasBlock[], pageIndex: number): number | null {
@@ -123,7 +147,7 @@ function resolvePageOverflow(
   if (pageIndex + 1 < pages.length) {
     return moveBlockToNextPage(blocks, overflowBlockId, pageIndex);
   }
-  return insertPagebreakBefore(blocks, overflowBlockId);
+  return insertPagebreakBefore(blocks, overflowBlockId, "auto");
 }
 
 function deletePage(blocks: CanvasBlock[], pageIndex: number): CanvasBlock[] | null {
@@ -314,80 +338,6 @@ function DesktopOnly({
   return children;
 }
 
-function HomeScreen({ onWorksheetClick }: { onWorksheetClick: () => void }) {
-  const cards = [
-    { title: "Задание", image: homeTask },
-    { title: "Презентация", image: homePresentation },
-    { title: "Рабочий лист", image: homeWorksheet, onClick: onWorksheetClick },
-    { title: "Мотивирующее задание", image: homeMotivation },
-  ];
-
-  return (
-    <div className="new-home">
-      <aside className="new-home__rail" aria-label="Основная навигация">
-        <span className="new-home__collapse">»</span>
-        {["⌂", "✦", "▤", "▣", "○", "▢", "⌁", "▥", "☑"].map((item, index) => (
-          <span key={`${item}-${index}`} className={index === 1 ? "is-active" : ""}>
-            {item}
-          </span>
-        ))}
-        <span className="new-home__avatar">И</span>
-      </aside>
-      <main className="new-home__main">
-        <section className="new-home__surface">
-          <div className="new-home__shine" />
-          <div className="new-home__assistant">
-            <h1><span>✦</span> Чем вам помочь?</h1>
-            <div className="new-home__prompt">Например, подготовь тест по теме русский авангард <span>→</span></div>
-          </div>
-          <div className="new-home__settings">?　⚙</div>
-          <div className="new-home__tabs">
-            <button className="is-active">Подготовка к уроку</button>
-            <button>Проведение урока</button>
-            <button>Анализ результатов</button>
-          </div>
-          <section className="new-home__create">
-            <h2>Создание материалов для урока</h2>
-            <div className="new-home__cards">
-              {cards.map((card) => (
-                <button
-                  key={card.title}
-                  type="button"
-                  className={card.onClick ? "new-home-card is-clickable" : "new-home-card"}
-                  onClick={card.onClick}
-                  disabled={!card.onClick}
-                >
-                  <img src={card.image} alt="" />
-                  <span>{card.title}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-          <div className="new-home__bottom-grid">
-            <MockPanel title="Библиотека промптов" subtitle="Выбирайте готовый сценарий взаимодействия с ИИ" />
-            <MockPanel title="Пространство экспериментов" subtitle="Тестируйте новые инструменты и предлагайте свои идеи" />
-            <MockPanel title="Викторины" subtitle="Используйте готовые или создавайте новые викторины" />
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-function MockPanel({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <section className="new-home-panel">
-      <h3>{title}</h3>
-      <p>{subtitle}</p>
-      <ul>
-        <li>Подготовить сценарий урока</li>
-        <li>Объяснить материал</li>
-        <li>Создать учебный материал</li>
-      </ul>
-    </section>
-  );
-}
-
 function LoadingScreen() {
   return (
     <div className="new-loading">
@@ -427,24 +377,30 @@ function WorksheetWorkspace(props: WorkspaceProps) {
     setActivePage((current) => Math.min(current, pageCount - 1));
   }, [pageCount]);
 
-  const insertBlock = (kind: CanvasBlockKind, index = props.blocks.length) => {
+  const insertBlock = (kind: CanvasBlockKind, index?: number) => {
     const block = createCanvasBlock(kind);
+    const insertAt = kind === "pagebreak" && index === undefined
+      ? insertIndexAfterPage(props.blocks, pages, activePage)
+      : (index ?? props.blocks.length);
     const next = [...props.blocks];
-    next.splice(index, 0, block);
+    next.splice(insertAt, 0, block);
     props.onBlocksChange(next);
     props.onSelectedBlockChange(block.id);
     if (kind === "pagebreak") {
-      setActivePage(splitBlocksIntoPages(next).length - 1);
+      setActivePage(activePage + 1);
     }
   };
 
   const addPage = () => {
-    const next = [...props.blocks, createCanvasBlock("pagebreak")];
+    const insertAt = insertIndexAfterPage(props.blocks, pages, activePage);
+    const next = [...props.blocks];
+    next.splice(insertAt, 0, createCanvasBlock("pagebreak"));
+    const newPageIndex = activePage + 1;
     props.onBlocksChange(next);
     props.onSelectedBlockChange(null);
-    setActivePage(splitBlocksIntoPages(next).length - 1);
+    setActivePage(newPageIndex);
     window.requestAnimationFrame(() => {
-      document.getElementById(`worksheet-page-${splitBlocksIntoPages(next).length}`)?.scrollIntoView({
+      document.getElementById(`worksheet-page-${newPageIndex + 1}`)?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
@@ -458,6 +414,22 @@ function WorksheetWorkspace(props: WorkspaceProps) {
       return;
     }
     if (!draggedBlockId) return;
+    const dragged = props.blocks.find((block) => block.id === draggedBlockId);
+    if (!dragged) return;
+
+    if (dragged.kind === "text") {
+      const groupId = getTextGroupId(dragged);
+      const segments = groupId ? getTextGroupSegments(props.blocks, groupId) : [];
+      if (groupId && segments[0]?.id === dragged.id) {
+        const moved = moveTextGroupBlockRange(props.blocks, groupId, index);
+        if (moved) {
+          props.onBlocksChange(moved);
+          setDraggedBlockId(null);
+          return;
+        }
+      }
+    }
+
     const from = props.blocks.findIndex((block) => block.id === draggedBlockId);
     if (from < 0) return;
     const next = [...props.blocks];
@@ -681,6 +653,7 @@ function EditorSettings({
   selectedBlock,
   showAnswers,
   showDifficulty,
+  onBlockChange,
   onShowAnswersChange,
   onShowDifficultyChange,
 }: {
@@ -697,7 +670,44 @@ function EditorSettings({
       <h3>{selectedBlock ? "Настройки задания" : "Настройки рабочего листа"}</h3>
       {selectedBlock ? (
         <>
-          {(selectedBlock.kind === "single" || selectedBlock.kind === "multi" || selectedBlock.kind === "graph") ? (
+          {(selectedBlock.kind === "single" || selectedBlock.kind === "multi") ? (
+            <>
+              <Select
+                label="Тип ответов"
+                value={selectedBlock.choiceAnswerType ?? "Текст"}
+                options={CHOICE_ANSWER_TYPES.map((value) => ({ value, label: value }))}
+                onChange={(choiceAnswerType) =>
+                  onBlockChange({
+                    ...selectedBlock,
+                    choiceAnswerType: choiceAnswerType as CanvasBlock["choiceAnswerType"],
+                  })
+                }
+              />
+              <Select
+                label="Количество ответов"
+                value={String(selectedBlock.options?.length ?? 4)}
+                options={["2", "3", "4", "5", "6"].map((value) => ({ value, label: value }))}
+                onChange={(countValue) => {
+                  const count = Math.max(2, Math.min(6, Number(countValue) || 4));
+                  const options = [...(selectedBlock.options ?? [])];
+                  while (options.length < count) {
+                    options.push({ id: nextOptionId(), text: "", correct: false });
+                  }
+                  onBlockChange({
+                    ...selectedBlock,
+                    options: options.slice(0, count),
+                  });
+                }}
+              />
+              <Switch
+                label="Перемешать ответы"
+                checked={selectedBlock.shuffleOptions ?? true}
+                onChange={(shuffleOptions) =>
+                  onBlockChange({ ...selectedBlock, shuffleOptions })
+                }
+              />
+            </>
+          ) : selectedBlock.kind === "graph" ? (
             <>
               <Select
                 label="Тип ответов"
@@ -711,7 +721,7 @@ function EditorSettings({
               />
               <Select
                 label="Количество ответов"
-                value={String(selectedBlock.options?.length ?? 4)}
+                value="4"
                 options={["2", "3", "4", "5", "6"].map((value) => ({ value, label: value }))}
                 onChange={() => undefined}
               />
@@ -721,18 +731,28 @@ function EditorSettings({
             <>
               <Select
                 label="Тип ответов"
-                value="Линии"
+                value={selectedBlock.answerType ?? "Линии"}
                 options={["Линии", "Клетка", "Блок ответа", "Оси", "Координатные прямые", "Луч"].map((value) => ({
                   value,
                   label: value,
                 }))}
-                onChange={() => undefined}
+                onChange={(answerType) =>
+                  onBlockChange({
+                    ...selectedBlock,
+                    answerType: answerType as CanvasBlock["answerType"],
+                  })
+                }
               />
               <Select
                 label="Высота блока"
-                value="2"
+                value={String(selectedBlock.blockHeight ?? 2)}
                 options={["1", "2", "3", "4", "5"].map((value) => ({ value, label: value }))}
-                onChange={() => undefined}
+                onChange={(height) =>
+                  onBlockChange({
+                    ...selectedBlock,
+                    blockHeight: Math.max(1, Number(height) || 1),
+                  })
+                }
               />
             </>
           ) : selectedBlock.kind === "match" ? (
@@ -837,6 +857,19 @@ function Worksheet({
   );
 
   const moveBlock = (index: number, direction: -1 | 1) => {
+    const block = blocks[index];
+    if (block.kind === "text") {
+      const groupId = getTextGroupId(block);
+      const segments = groupId ? getTextGroupSegments(blocks, groupId) : [];
+      if (groupId && segments[0]?.id === block.id) {
+        const moved = moveTextGroupByStep(blocks, groupId, direction);
+        if (moved) {
+          onBlocksChange(moved);
+          return;
+        }
+      }
+    }
+
     const target = index + direction;
     if (target < 0 || target >= blocks.length) return;
     const next = [...blocks];
@@ -845,7 +878,62 @@ function Worksheet({
   };
 
   useLayoutEffect(() => {
-    if (paginatingRef.current) return;
+    if (paginatingRef.current || !editing) return;
+
+    const rebalanceCtx = {
+      pages,
+      getTasksElement: (pageIndex: number) =>
+        sheetRefs.current[pageIndex]?.querySelector<HTMLElement>(".new-sheet__tasks") ?? null,
+      contentMaxForPage: (pageIndex: number) =>
+        pageIndex === 0 ? SHEET_CONTENT_MAX : SHEET_CONTENT_MAX_CONTINUED,
+    };
+
+    const rebalanced = rebalanceAllTextGroups(blocks, rebalanceCtx);
+    if (rebalanced) {
+      paginatingRef.current = true;
+      onBlocksChange(rebalanced);
+      if (selectedBlockId) {
+        const selected = rebalanced.find((block) => block.id === selectedBlockId);
+        if (!selected) {
+          const groupId = blocks.find((block) => block.id === selectedBlockId);
+          const prevGroupId = groupId ? getTextGroupId(groupId) : null;
+          if (prevGroupId) {
+            const active = getActiveTextSegment(rebalanced, prevGroupId);
+            if (active) onSelectedBlockChange(active.id);
+          }
+        }
+      }
+      window.requestAnimationFrame(() => {
+        paginatingRef.current = false;
+      });
+      return;
+    }
+
+    const mergeCtx = {
+      getTasksElement: (pageIndex: number) =>
+        sheetRefs.current[pageIndex]?.querySelector<HTMLElement>(".new-sheet__tasks") ?? null,
+      contentMaxForPage: (pageIndex: number) =>
+        pageIndex === 0 ? SHEET_CONTENT_MAX : SHEET_CONTENT_MAX_CONTINUED,
+    };
+
+    const normalized = normalizePages(blocks);
+    let nextBlocks = normalized ?? blocks;
+    const merged = tryMergeAutoPages(nextBlocks, mergeCtx);
+    if (merged) nextBlocks = merged;
+
+    if (nextBlocks !== blocks) {
+      paginatingRef.current = true;
+      onBlocksChange(nextBlocks);
+      const nextPageCount = splitBlocksIntoPages(nextBlocks).length;
+      if (activePage >= nextPageCount) {
+        onActivePageChange(Math.max(0, nextPageCount - 1));
+      }
+      window.requestAnimationFrame(() => {
+        paginatingRef.current = false;
+      });
+      return;
+    }
+
     for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
       const sheet = sheetRefs.current[pageIndex];
       const tasks = sheet?.querySelector<HTMLElement>(".new-sheet__tasks");
@@ -858,6 +946,7 @@ function Worksheet({
       let overflowId: string | null = null;
       let used = 0;
       for (const block of page.blocks) {
+        if (block.kind === "text") continue;
         const node = tasks.querySelector<HTMLElement>(`[data-block-id="${block.id}"]`);
         const height = node?.offsetHeight ?? 0;
         if (used > 0 && used + height > contentMax) {
@@ -867,9 +956,10 @@ function Worksheet({
         used += height;
       }
       if (!overflowId) {
-        overflowId = page.blocks[page.blocks.length - 1]?.id ?? null;
+        const nonTextBlocks = page.blocks.filter((block) => block.kind !== "text");
+        overflowId = nonTextBlocks.at(-1)?.id ?? null;
       }
-      if (!overflowId || overflowId === page.blocks[0]?.id) continue;
+      if (!overflowId) continue;
 
       const next = resolvePageOverflow(blocks, pageIndex, overflowId);
       if (!next) continue;
@@ -880,7 +970,7 @@ function Worksheet({
       });
       return;
     }
-  }, [blocks, pages, onBlocksChange, editing, showAnswers, showDifficulty]);
+  }, [blocks, pages, onBlocksChange, editing, showAnswers, showDifficulty, selectedBlockId, onSelectedBlockChange, activePage, onActivePageChange]);
 
   useEffect(() => {
     const canvas = document.querySelector(".new-workspace__canvas");
@@ -956,9 +1046,10 @@ function Worksheet({
                   <div key={block.id} data-block-id={block.id}>
                     <CanvasBlockView
                       block={block}
+                      allBlocks={blocks}
                       number={taskNumberAt(blocks, index)}
                       editing={editing}
-                      selected={block.id === selectedBlockId}
+                      selectedBlockId={selectedBlockId}
                       showAnswers={showAnswers}
                       showDifficulty={showDifficulty}
                       onSelect={() => {
@@ -969,6 +1060,23 @@ function Worksheet({
                       onChange={updateBlock}
                       onMove={(direction) => moveBlock(index, direction)}
                       onDuplicate={() => {
+                        if (block.kind === "text") {
+                          const groupId = getTextGroupId(block);
+                          if (groupId) {
+                            const segments = blocks.filter(
+                              (item) => item.kind === "text" && getTextGroupId(item) === groupId,
+                            );
+                            const lastSegment = segments.at(-1);
+                            const lastIndex = lastSegment
+                              ? blocks.findIndex((item) => item.id === lastSegment.id)
+                              : index;
+                            const next = duplicateTextGroup(blocks, groupId);
+                            const newSegment = next[lastIndex + 1];
+                            onBlocksChange(next);
+                            if (newSegment) onSelectedBlockChange(newSegment.id);
+                            return;
+                          }
+                        }
                         const duplicate = { ...block, id: createCanvasBlock(block.kind).id };
                         const baseId = duplicate.id;
                         let suffix = 1;
@@ -981,6 +1089,14 @@ function Worksheet({
                         onSelectedBlockChange(duplicate.id);
                       }}
                       onDelete={() => {
+                        if (block.kind === "text") {
+                          const groupId = getTextGroupId(block);
+                          if (groupId) {
+                            onBlocksChange(deleteTextGroup(blocks, groupId));
+                            onSelectedBlockChange(null);
+                            return;
+                          }
+                        }
                         onBlocksChange(blocks.filter((item) => item.id !== block.id));
                         onSelectedBlockChange(null);
                       }}
@@ -995,6 +1111,43 @@ function Worksheet({
                   </div>
                 );
               })}
+              {editing ? (() => {
+                const pbIndex = pagebreakIndexAfterPage(blocks, pageIndex);
+                if (pbIndex === null) return null;
+                const pbBlock = blocks[pbIndex];
+                if (pbBlock.pagebreakSource !== "manual") return null;
+                return (
+                  <div key={pbBlock.id} data-block-id={pbBlock.id}>
+                    <CanvasBlockView
+                      block={pbBlock}
+                      allBlocks={blocks}
+                      number={0}
+                      editing={editing}
+                      selectedBlockId={selectedBlockId}
+                      showAnswers={showAnswers}
+                      showDifficulty={showDifficulty}
+                      onSelect={() => {
+                        onActivePageChange(pageIndex);
+                        onSelectedBlockChange(pbBlock.id);
+                      }}
+                      onEnterEdit={onEnterEdit}
+                      onChange={updateBlock}
+                      onMove={(direction) => moveBlock(pbIndex, direction)}
+                      onDuplicate={() => undefined}
+                      onDelete={() => {
+                        const withoutBreak = blocks.filter((item) => item.id !== pbBlock.id);
+                        onBlocksChange(normalizePages(withoutBreak) ?? withoutBreak);
+                        onSelectedBlockChange(null);
+                      }}
+                      onDragStart={() => onBlockDragStart(pbBlock.id)}
+                    />
+                    <CanvasDropZone
+                      active={dragActive}
+                      onDrop={() => onDropAt(pbIndex + 1)}
+                    />
+                  </div>
+                );
+              })() : null}
             </div>
             {showPageNumbers ? (
               <span className="new-sheet__page-number">{pageIndex + 1}</span>
