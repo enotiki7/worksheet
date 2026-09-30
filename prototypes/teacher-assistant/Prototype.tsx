@@ -112,6 +112,13 @@ export function Prototype() {
     setScreen("lesson-edit");
   };
 
+  const prepareAnotherLesson = () => {
+    const pairId = lesson.pairId || profile.pairs[0]?.id || "";
+    setLesson({ ...emptyLesson(), pairId });
+    setLessonContent(null);
+    setScreen("lesson-pick");
+  };
+
   const fillGap = (gap: string) => {
     if (gap.includes("роль")) setScreen("onboarding-1");
     else if (gap.includes("предмет")) setScreen("onboarding-2");
@@ -266,6 +273,8 @@ export function Prototype() {
         content={lessonContent}
         onChange={setLessonContent}
         onBack={() => setScreen("lesson-edit")}
+        onPrepareAnother={prepareAnotherLesson}
+        onScheduleLesson={() => setScreen("home")}
       />
     );
   }

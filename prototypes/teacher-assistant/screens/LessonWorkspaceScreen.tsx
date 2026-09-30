@@ -2,6 +2,7 @@ import { useState } from "react";
 import { WORKSPACE_SUGGESTS } from "../lessonContent";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
 import { WireAiPanel } from "../components/WireAiPanel";
+import { WireModal, WireModalActions } from "../components/WireModal";
 import { WButton } from "../components/wire";
 import type { LessonContent, WorkspaceTab } from "../types";
 
@@ -10,6 +11,8 @@ type Props = {
   content: LessonContent;
   onChange: (content: LessonContent) => void;
   onBack: () => void;
+  onPrepareAnother: () => void;
+  onScheduleLesson: () => void;
 };
 
 const TABS: { id: WorkspaceTab; label: string }[] = [
@@ -18,8 +21,16 @@ const TABS: { id: WorkspaceTab; label: string }[] = [
   { id: "tasks", label: "Задания" },
 ];
 
-export function LessonWorkspaceScreen({ topic, content, onChange, onBack }: Props) {
+export function LessonWorkspaceScreen({
+  topic,
+  content,
+  onChange,
+  onBack,
+  onPrepareAnother,
+  onScheduleLesson,
+}: Props) {
   const [tab, setTab] = useState<WorkspaceTab>("plan");
+  const [savedOpen, setSavedOpen] = useState(false);
 
   const contextLabel =
     tab === "plan" ? "цели и план урока" : tab === "presentation" ? "презентация" : "задания";
@@ -31,10 +42,39 @@ export function LessonWorkspaceScreen({ topic, content, onChange, onBack }: Prop
           <p className="wf-kicker">Материалы урока</p>
           <h1 className="wf-title">{topic}</h1>
         </div>
-        <WButton variant="ghost" onClick={onBack}>
-          К редактированию
-        </WButton>
+        <div className="ta-workspace__actions">
+          <WButton variant="ghost" onClick={onBack}>
+            К редактированию
+          </WButton>
+          <WButton onClick={() => setSavedOpen(true)}>Сохранить</WButton>
+        </div>
       </header>
+
+      {savedOpen ? (
+        <WireModal
+          onClose={() => setSavedOpen(false)}
+          actions={
+            <WireModalActions
+              primaryLabel="Подготовить ещё урок"
+              secondaryLabel="Запланировать урок"
+              onPrimary={() => {
+                setSavedOpen(false);
+                onPrepareAnother();
+              }}
+              onSecondary={() => {
+                setSavedOpen(false);
+                onScheduleLesson();
+              }}
+            />
+          }
+        >
+          <p className="ta-modal__achievement">Ачивка «Урокодел»</p>
+          <p>
+            Ура! Первый урок подготовлен! Ачивка «Урокодел» получена и сохранена у вас в профиле. Что хотите сделать с
+            уроком?
+          </p>
+        </WireModal>
+      ) : null}
 
       <div className="ta-workspace__tabs">
         {TABS.map((item) => (
