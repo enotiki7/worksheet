@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
 import { WORKSPACE_SUGGESTS } from "../lessonContent";
+import { LIBRARY_TYPE_LABELS } from "../mock";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
 import { WireAiPanel } from "../components/WireAiPanel";
 import { WireModal, WireModalActions } from "../components/WireModal";
 import { WButton } from "../components/wire";
-import type { LessonContent, WorkspaceTab } from "../types";
+import type { LessonContent, LibraryMaterial, WorkspaceTab } from "../types";
 
 type Props = {
   topic: string;
@@ -13,6 +15,10 @@ type Props = {
   onBack: () => void;
   onPrepareAnother: () => void;
   onScheduleLesson: () => void;
+  libraryMaterials?: LibraryMaterial[];
+  attachedLibraryIds?: string[];
+  showLibraryAttach?: boolean;
+  onToggleLibrary?: (id: string) => void;
 };
 
 const TABS: { id: WorkspaceTab; label: string }[] = [
@@ -28,12 +34,19 @@ export function LessonWorkspaceScreen({
   onBack,
   onPrepareAnother,
   onScheduleLesson,
+  libraryMaterials,
+  attachedLibraryIds = [],
+  showLibraryAttach,
+  onToggleLibrary,
 }: Props) {
   const [tab, setTab] = useState<WorkspaceTab>("plan");
   const [savedOpen, setSavedOpen] = useState(false);
 
   const contextLabel =
     tab === "plan" ? "цели и план урока" : tab === "presentation" ? "презентация" : "задания";
+
+  const attachedMaterials =
+    libraryMaterials?.filter((item) => attachedLibraryIds.includes(item.id)) ?? [];
 
   return (
     <div className="ta-workspace">
@@ -89,8 +102,31 @@ export function LessonWorkspaceScreen({
         ))}
       </div>
 
+      {attachedMaterials.length > 0 ? (
+        <div className="ta-workspace__attached">
+          <p className="wf-card-kicker">Из библиотеки</p>
+          <div className="ta-workspace__attached-list">
+            {attachedMaterials.map((item) => (
+              <span key={item.id} className="ta-workspace__attached-chip">
+                {LIBRARY_TYPE_LABELS[item.type]} · {item.title}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="ta-workspace__layout">
         <div className="ta-workspace__main">
+          {showLibraryAttach && libraryMaterials && onToggleLibrary ? (
+            <ExistingMaterialsPanel
+              title="Вариант C · Добавить из библиотеки"
+              hint="После генерации можно дополнить урок материалами, созданными ранее отдельно."
+              materials={libraryMaterials}
+              selectedIds={attachedLibraryIds}
+              onToggle={onToggleLibrary}
+            />
+          ) : null}
+
           {tab === "plan" ? (
             <>
               <section className="ta-section">

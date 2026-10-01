@@ -1,4 +1,4 @@
-import type { RoleId, TeachingPair } from "./types";
+import type { LibraryMaterial, RoleId, TeachingPair } from "./types";
 
 export const ROLES: { id: RoleId; title: string; detail: string; benefit: string }[] = [
   {
@@ -60,6 +60,68 @@ export const HOME_MATERIALS = [
   { id: "task", title: "Создать задание", later: true },
   { id: "analyze", title: "Проанализировать урок", later: true },
 ];
+
+export const LIBRARY_MATERIALS: LibraryMaterial[] = [
+  {
+    id: "lib-pres-1",
+    type: "presentation",
+    title: "Модуль числа · объяснение",
+    subject: "Алгебра",
+    grade: "9",
+    updatedAt: "12 сен 2026",
+  },
+  {
+    id: "lib-sheet-1",
+    type: "worksheet",
+    title: "Рабочий лист: свойства модуля",
+    subject: "Алгебра",
+    grade: "9",
+    updatedAt: "8 сен 2026",
+  },
+  {
+    id: "lib-task-1",
+    type: "task",
+    title: "Задание: сравнение выражений с модулем",
+    subject: "Алгебра",
+    grade: "9",
+    updatedAt: "5 сен 2026",
+  },
+  {
+    id: "lib-task-2",
+    type: "task",
+    title: "Домашняя работа · базовый уровень",
+    subject: "Алгебра",
+    grade: "9",
+    updatedAt: "1 сен 2026",
+  },
+  {
+    id: "lib-info-1",
+    type: "infographic",
+    title: "Инфографика: модуль на координатной прямой",
+    subject: "Алгебра",
+    grade: "9",
+    updatedAt: "28 авг 2026",
+  },
+  {
+    id: "lib-pres-2",
+    type: "presentation",
+    title: "Квадратные уравнения · введение",
+    subject: "Алгебра",
+    grade: "9",
+    updatedAt: "20 авг 2026",
+  },
+];
+
+export const LIBRARY_TYPE_LABELS: Record<LibraryMaterial["type"], string> = {
+  presentation: "Презентация",
+  worksheet: "Рабочий лист",
+  task: "Задание",
+  infographic: "Инфографика",
+};
+
+export function libraryForPair(subject: string, grade: string) {
+  return LIBRARY_MATERIALS.filter((item) => item.subject === subject && item.grade === grade);
+}
 
 export const LESSON_OUTCOME = [
   "Сценарий урока с этапами и таймингом",

@@ -1013,6 +1013,67 @@ textarea {
   margin-top: 20px;
 }
 
+.ta-collect-plan {
+  margin-top: 8px;
+}
+
+.ta-library {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed var(--wf-line-strong);
+  background: var(--wf-surface-muted);
+}
+
+.ta-library.is-compact {
+  margin-top: 20px;
+  padding: 12px;
+}
+
+.ta-library__title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ta-library__group {
+  margin-top: 12px;
+}
+
+.ta-library__group-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wf-dim);
+}
+
+.ta-library__summary {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--wf-dim);
+}
+
+.ta-workspace__attached {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--wf-line);
+  background: var(--wf-surface-muted);
+}
+
+.ta-workspace__attached-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ta-workspace__attached-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--wf-line-strong);
+  font-size: 12px;
+  background: var(--wf-surface);
+}
+
 @media (max-width: 960px) {
   .ta-pick,
   .ta-edit__layout,

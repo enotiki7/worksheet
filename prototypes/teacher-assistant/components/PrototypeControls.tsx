@@ -1,5 +1,5 @@
 import type { Scenario, ScreenId } from "../types";
-import { scenarios } from "../scenarios";
+import { SCENARIO_LABELS, scenarios } from "../scenarios";
 
 const SCREENS: { id: ScreenId; label: string }[] = [
   { id: "phone", label: "Телефон" },
@@ -35,7 +35,7 @@ export function PrototypeControls({
         <select value={scenario} onChange={(event) => onScenario(event.target.value as Scenario)}>
           {scenarios.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {SCENARIO_LABELS[item]}
             </option>
           ))}
         </select>

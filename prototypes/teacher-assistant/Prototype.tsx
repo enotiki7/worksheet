@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PrototypeControls } from "./components/PrototypeControls";
-import { DEFAULT_PAIR, umkForSubject } from "./mock";
-import { getScenario, profileForScenario } from "./scenarios";
+import { DEFAULT_PAIR, libraryForPair, umkForSubject } from "./mock";
+import { attachPointForScenario, getScenario, isMaterialsScenario, profileForScenario } from "./scenarios";
 import { HomeScreen } from "./screens/HomeScreen";
 import { buildLessonContent } from "./lessonContent";
 import {
@@ -22,6 +22,40 @@ import {
 import { PhoneScreen } from "./screens/PhoneScreen";
 import type { LessonContent, LessonDraft, RoleId, ScreenId, TeachingPair, UserProfile } from "./types";
 
+const SCREEN_IDS: ScreenId[] = [
+  "phone",
+  "onboarding-1",
+  "onboarding-2",
+  "onboarding-3",
+  "onboarding-4",
+  "home",
+  "lesson-collect",
+  "lesson-context",
+  "lesson-pick",
+  "lesson-edit",
+  "lesson-generating",
+  "lesson-workspace",
+];
+
+function screenFromParams(value: string | null): ScreenId | null {
+  if (value && SCREEN_IDS.includes(value as ScreenId)) return value as ScreenId;
+  return null;
+}
+
+function defaultScreenForScenario(scenario: ReturnType<typeof getScenario>): ScreenId {
+  if (scenario === "skipped" || scenario === "multi-subject" || isMaterialsScenario(scenario)) return "home";
+  return "phone";
+}
+
+function initialScreen(
+  scenario: ReturnType<typeof getScenario>,
+  screenParam: string | null,
+  figmaCapture: boolean,
+): ScreenId {
+  if (isMaterialsScenario(scenario) && !figmaCapture) return "home";
+  return screenFromParams(screenParam) ?? defaultScreenForScenario(scenario);
+}
+
 function emptyLesson(): LessonDraft {
   return {
     pairId: "",
@@ -31,6 +65,7 @@ function emptyLesson(): LessonDraft {
     insertAfterLessonId: null,
     isCreating: false,
     withoutPlan: false,
+    attachedLibraryIds: [],
   };
 }
 
@@ -41,8 +76,9 @@ function nextPairId(pairs: TeachingPair[]) {
 export function Prototype() {
   const [params, setParams] = useSearchParams();
   const scenario = getScenario(params.get("scenario"));
+  const figmaCapture = params.get("figma") === "1";
 
-  const [screen, setScreen] = useState<ScreenId>("phone");
+  const [screen, setScreen] = useState<ScreenId>(() => initialScreen(scenario, params.get("screen"), figmaCapture));
   const [profile, setProfile] = useState<UserProfile>(() => profileForScenario(scenario));
   const [pairDraft, setPairDraft] = useState<TeachingPair>({ ...DEFAULT_PAIR, id: "draft" });
   const [lesson, setLesson] = useState<LessonDraft>(emptyLesson);
@@ -53,10 +89,50 @@ export function Prototype() {
   useEffect(() => {
     const next = profileForScenario(scenario);
     setProfile(next);
-    setScreen(scenario === "skipped" ? "home" : scenario === "multi-subject" ? "home" : "phone");
     setLesson(emptyLesson());
     setLessonContent(null);
-  }, [scenario]);
+    setScreen(initialScreen(scenario, params.get("screen"), figmaCapture));
+  }, [scenario, figmaCapture]);
+
+  useEffect(() => {
+    if (!figmaCapture || !isMaterialsScenario(scenario)) return;
+    const needsPair = ["lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace"].includes(screen);
+    if (!needsPair || profile.pairs.length > 0) return;
+
+    const point = attachPointForScenario(scenario);
+    setProfile((prev) => ({
+      ...prev,
+      pairs: [{ ...DEFAULT_PAIR, id: "pair-1" }],
+    }));
+    setLesson((prev) => ({
+      ...prev,
+      pairId: "pair-1",
+      topicId: "l2",
+      topic: "Модуль числа",
+      attachedLibraryIds:
+        point === "pick"
+          ? ["lib-pres-1", "lib-sheet-1"]
+          : point === "edit"
+            ? ["lib-task-1", "lib-sheet-1"]
+            : point === "workspace"
+              ? ["lib-pres-1", "lib-info-1", "lib-task-1"]
+              : prev.attachedLibraryIds,
+    }));
+  }, [figmaCapture, scenario, screen, profile.pairs.length]);
+
+  useEffect(() => {
+    if (!["lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace", "lesson-context"].includes(screen)) {
+      return;
+    }
+    const pairId = profile.pairs[0]?.id ?? "";
+    setLesson((prev) => ({
+      ...prev,
+      pairId: prev.pairId || pairId,
+      topicId: prev.topicId || "l2",
+      topic: prev.topic || "Модуль числа",
+      withoutPlan: false,
+    }));
+  }, [screen, profile.pairs]);
 
   useEffect(() => {
     if (!["lesson-edit", "lesson-generating", "lesson-workspace"].includes(screen) || lessonContent) return;
@@ -72,6 +148,22 @@ export function Prototype() {
     () => profile.pairs.find((item) => item.id === lesson.pairId) ?? profile.pairs[0],
     [profile.pairs, lesson.pairId],
   );
+
+  const attachPoint = attachPointForScenario(scenario);
+
+  const libraryMaterials = useMemo(() => {
+    if (!activePair) return [];
+    return libraryForPair(activePair.subject, activePair.grade);
+  }, [activePair]);
+
+  const toggleLibraryMaterial = (id: string) => {
+    setLesson((prev) => ({
+      ...prev,
+      attachedLibraryIds: prev.attachedLibraryIds.includes(id)
+        ? prev.attachedLibraryIds.filter((item) => item !== id)
+        : [...prev.attachedLibraryIds, id],
+    }));
+  };
 
   const patchProfile = (patch: Partial<UserProfile>) => setProfile((prev) => ({ ...prev, ...patch }));
 
@@ -129,6 +221,14 @@ export function Prototype() {
   const setScenario = (value: typeof scenario) => {
     const next = new URLSearchParams(params);
     next.set("scenario", value);
+    next.set("screen", defaultScreenForScenario(value));
+    setParams(next);
+  };
+
+  const setScreenParam = (value: ScreenId) => {
+    setScreen(value);
+    const next = new URLSearchParams(params);
+    next.set("screen", value);
     setParams(next);
   };
 
@@ -245,7 +345,14 @@ export function Prototype() {
         onLesson={(patch) => setLesson((prev) => ({ ...prev, ...patch }))}
         onUploadPlan={() => patchProfile({ planFile: "ktp_upload.docx" })}
         onContinue={openLessonEdit}
-        onBack={() => setScreen(profile.pairs.length > 1 ? "lesson-context" : "home")}
+        onBack={() => {
+          if (isMaterialsScenario(scenario)) setScreen("lesson-collect");
+          else if (profile.pairs.length > 1) setScreen("lesson-context");
+          else setScreen("home");
+        }}
+        libraryMaterials={libraryMaterials}
+        showLibraryAttach={attachPoint === "pick"}
+        onToggleLibrary={toggleLibraryMaterial}
       />
     );
   }
@@ -258,6 +365,10 @@ export function Prototype() {
         onChange={setLessonContent}
         onBack={() => setScreen("lesson-pick")}
         onGenerate={() => setScreen("lesson-generating")}
+        libraryMaterials={libraryMaterials}
+        attachedLibraryIds={lesson.attachedLibraryIds}
+        showLibraryAttach={attachPoint === "edit"}
+        onToggleLibrary={toggleLibraryMaterial}
       />
     );
   }
@@ -275,13 +386,19 @@ export function Prototype() {
         onBack={() => setScreen("lesson-edit")}
         onPrepareAnother={prepareAnotherLesson}
         onScheduleLesson={() => setScreen("home")}
+        libraryMaterials={libraryMaterials}
+        attachedLibraryIds={lesson.attachedLibraryIds}
+        showLibraryAttach={attachPoint === "workspace"}
+        onToggleLibrary={toggleLibraryMaterial}
       />
     );
   }
 
   return (
     <div className="wf-app ta-app">
-      <PrototypeControls scenario={scenario} screen={screen} onScenario={setScenario} onScreen={setScreen} />
+      {figmaCapture ? null : (
+        <PrototypeControls scenario={scenario} screen={screen} onScenario={setScenario} onScreen={setScreenParam} />
+      )}
       {content}
     </div>
   );

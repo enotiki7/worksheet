@@ -1,8 +1,9 @@
+import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
 import { MATERIAL_LABELS } from "../lessonContent";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
 import { WireAiPanel } from "../components/WireAiPanel";
 import { WButton, WCheck } from "../components/wire";
-import type { LessonContent, LessonStep, MaterialId } from "../types";
+import type { LessonContent, LessonStep, LibraryMaterial, MaterialId } from "../types";
 
 type Props = {
   topic: string;
@@ -10,9 +11,23 @@ type Props = {
   onChange: (content: LessonContent) => void;
   onBack: () => void;
   onGenerate: () => void;
+  libraryMaterials?: LibraryMaterial[];
+  attachedLibraryIds?: string[];
+  showLibraryAttach?: boolean;
+  onToggleLibrary?: (id: string) => void;
 };
 
-export function LessonEditScreen({ topic, content, onChange, onBack, onGenerate }: Props) {
+export function LessonEditScreen({
+  topic,
+  content,
+  onChange,
+  onBack,
+  onGenerate,
+  libraryMaterials,
+  attachedLibraryIds = [],
+  showLibraryAttach,
+  onToggleLibrary,
+}: Props) {
   const updateStep = (id: string, patch: Partial<LessonStep>) => {
     onChange({
       ...content,
@@ -209,6 +224,18 @@ export function LessonEditScreen({ topic, content, onChange, onBack, onGenerate 
               ))}
             </div>
           </section>
+
+          {showLibraryAttach && libraryMaterials && onToggleLibrary ? (
+            <section className="ta-section">
+              <ExistingMaterialsPanel
+                title="Вариант B · Добавить из библиотеки"
+                hint="Выберите материалы, созданные ранее отдельно. Их не нужно генерировать заново — они войдут в комплект урока."
+                materials={libraryMaterials}
+                selectedIds={attachedLibraryIds}
+                onToggle={onToggleLibrary}
+              />
+            </section>
+          ) : null}
         </div>
 
         <WireAiPanel

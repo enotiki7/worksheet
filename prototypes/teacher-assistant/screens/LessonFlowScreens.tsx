@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
 import { previewForLesson } from "../lessonContent";
 import { GRADES, SUBJECTS, lessonInPlan, planForPair, THEMATIC_PLANS, umkForSubject, type KtpTheme } from "../mock";
-import type { LessonDraft, TeachingPair, UserProfile } from "../types";
+import type { LessonDraft, LibraryMaterial, TeachingPair, UserProfile } from "../types";
 import { WButton, WCard, WChip, WDropzone, WInput } from "../components/wire";
 
 export function LessonCollectScreen({
@@ -17,6 +18,11 @@ export function LessonCollectScreen({
 }) {
   const umk = umkForSubject(draft.subject);
   const canSave = Boolean(draft.subject && draft.grade);
+  const planPreview =
+    draft.subject && draft.grade
+      ? planForPair({ id: "preview", subject: draft.subject, grade: draft.grade, umk }) ??
+        THEMATIC_PLANS.find((item) => item.subject === draft.subject && item.grade === draft.grade)
+      : null;
 
   return (
     <div className="ta-flow">
@@ -47,6 +53,16 @@ export function LessonCollectScreen({
         <span>{umk}</span>
         <span className="wf-hint">Определяется автоматически по предмету и классу</span>
       </div>
+
+      {planPreview ? (
+        <div className="wf-card ta-collect-plan">
+          <p className="wf-card-kicker">Тематическое планирование</p>
+          <p className="wf-card-title">{planPreview.title}</p>
+          <p className="wf-card-detail">
+            {planPreview.hours} ч · {planPreview.frp} · {planPreview.themes.length} тем
+          </p>
+        </div>
+      ) : null}
 
       <div className="wf-footer-actions">
         <WButton variant="ghost" onClick={onBack}>
@@ -204,6 +220,9 @@ export function LessonPickScreen({
   onUploadPlan,
   onContinue,
   onBack,
+  libraryMaterials,
+  showLibraryAttach,
+  onToggleLibrary,
 }: {
   profile: UserProfile;
   pair: TeachingPair;
@@ -212,6 +231,9 @@ export function LessonPickScreen({
   onUploadPlan: () => void;
   onContinue: () => void;
   onBack: () => void;
+  libraryMaterials?: LibraryMaterial[];
+  showLibraryAttach?: boolean;
+  onToggleLibrary?: (id: string) => void;
 }) {
   const plan = planForPair(pair) ?? THEMATIC_PLANS.find((item) => item.subject === pair.subject);
   const [openThemes, setOpenThemes] = useState<Set<string>>(() => new Set(plan?.themes[0]?.id ? [plan.themes[0].id] : []));
@@ -343,6 +365,17 @@ export function LessonPickScreen({
                 </div>
               ))}
             </section>
+
+            {showLibraryAttach && libraryMaterials && onToggleLibrary ? (
+              <ExistingMaterialsPanel
+                title="Вариант A · Добавить ранее созданные материалы"
+                hint="Материалы из вашей библиотеки можно привязать к уроку уже на этапе выбора темы."
+                materials={libraryMaterials}
+                selectedIds={lesson.attachedLibraryIds}
+                onToggle={onToggleLibrary}
+                compact
+              />
+            ) : null}
           </>
         ) : (
           <div className="ta-pick__preview-empty">

@@ -39,9 +39,29 @@ export type LessonDraft = {
   insertAfterLessonId: string | null;
   isCreating: boolean;
   withoutPlan: boolean;
+  attachedLibraryIds: string[];
 };
 
-export type Scenario = "full-onboarding" | "skipped" | "multi-subject";
+export type LibraryMaterialType = "presentation" | "worksheet" | "task" | "infographic";
+
+export type LibraryMaterial = {
+  id: string;
+  type: LibraryMaterialType;
+  title: string;
+  subject: string;
+  grade: string;
+  updatedAt: string;
+};
+
+export type Scenario =
+  | "full-onboarding"
+  | "skipped"
+  | "multi-subject"
+  | "materials-at-pick"
+  | "materials-at-edit"
+  | "materials-at-workspace";
+
+export type MaterialAttachPoint = "pick" | "edit" | "workspace";
 
 export type MaterialId =
   | "presentation"
