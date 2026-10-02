@@ -1,4 +1,4 @@
-import type { LibraryMaterial, RoleId, TeachingPair } from "./types";
+import type { LibraryMaterial, MaterialId, RoleId, Scenario, TeachingPair } from "./types";
 
 export const ROLES: { id: RoleId; title: string; detail: string; benefit: string }[] = [
   {
@@ -139,7 +139,51 @@ export type KtpLesson = {
   status: "done" | "next" | "planned";
   prevTopic?: string;
   nextTopic?: string;
+  createdMaterials?: MaterialId[];
 };
+
+export const DONE_LESSON_MATERIALS: MaterialId[] = ["presentation", "motivation", "classWork", "homework", "worksheet"];
+
+export function lessonStatusLabel(status: KtpLesson["status"]) {
+  if (status === "done") return "проведён";
+  if (status === "next") return "следующий";
+  return "в плане";
+}
+
+export function planForPick(scenario: Scenario, pair: TeachingPair): ThematicPlan | undefined {
+  const base = planForPair(pair) ?? THEMATIC_PLANS.find((item) => item.subject === pair.subject && item.grade === pair.grade);
+  if (!base) return undefined;
+
+  if (scenario === "next-lesson") {
+    return {
+      ...base,
+      themes: base.themes.map((theme) => ({
+        ...theme,
+        lessons: theme.lessons.map((lesson) => {
+          if (lesson.id === "l1") {
+            return { ...lesson, status: "done" as const, createdMaterials: DONE_LESSON_MATERIALS };
+          }
+          if (lesson.id === "l2") {
+            return { ...lesson, status: "next" as const, createdMaterials: undefined };
+          }
+          return { ...lesson, status: "planned" as const, createdMaterials: undefined };
+        }),
+      })),
+    };
+  }
+
+  return {
+    ...base,
+    themes: base.themes.map((theme) => ({
+      ...theme,
+      lessons: theme.lessons.map((lesson) => ({
+        ...lesson,
+        status: "planned" as const,
+        createdMaterials: undefined,
+      })),
+    })),
+  };
+}
 
 export type KtpTheme = {
   id: string;
@@ -182,17 +226,53 @@ export const THEMATIC_PLANS: ThematicPlan[] = [
             id: "l1",
             number: 3,
             topic: "Сравнение действительных чисел",
-            hours: 2,
-            status: "done",
+            hours: 1,
+            status: "planned",
             nextTopic: "Модуль числа",
           },
           {
             id: "l2",
             number: 4,
             topic: "Модуль числа",
-            hours: 2,
-            status: "next",
+            hours: 1,
+            status: "planned",
             prevTopic: "Сравнение действительных чисел",
+            nextTopic: "Неравенства с модулем",
+          },
+          {
+            id: "l1a",
+            number: 5,
+            topic: "Неравенства с модулем",
+            hours: 1,
+            status: "planned",
+            prevTopic: "Модуль числа",
+            nextTopic: "График функции модуля",
+          },
+          {
+            id: "l1b",
+            number: 6,
+            topic: "График функции модуля",
+            hours: 1,
+            status: "planned",
+            prevTopic: "Неравенства с модулем",
+            nextTopic: "Уравнения с модулем",
+          },
+          {
+            id: "l1c",
+            number: 7,
+            topic: "Уравнения с модулем",
+            hours: 1,
+            status: "planned",
+            prevTopic: "График функции модуля",
+            nextTopic: "Свойства модуля",
+          },
+          {
+            id: "l1d",
+            number: 8,
+            topic: "Свойства модуля",
+            hours: 1,
+            status: "planned",
+            prevTopic: "Уравнения с модулем",
             nextTopic: "Приближённые вычисления",
           },
         ],
@@ -210,7 +290,7 @@ export const THEMATIC_PLANS: ThematicPlan[] = [
             topic: "Приближённые вычисления",
             hours: 2,
             status: "planned",
-            prevTopic: "Модуль числа",
+            prevTopic: "Свойства модуля",
             nextTopic: "Квадратные корни",
           },
           {
@@ -246,7 +326,7 @@ export const THEMATIC_PLANS: ThematicPlan[] = [
             number: 12,
             topic: "Обособленные определения и приложения",
             hours: 2,
-            status: "next",
+            status: "planned",
             prevTopic: "Причастный оборот",
             nextTopic: "Сложное предложение",
           },

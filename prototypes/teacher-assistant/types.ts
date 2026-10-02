@@ -59,7 +59,8 @@ export type Scenario =
   | "multi-subject"
   | "materials-at-pick"
   | "materials-at-edit"
-  | "materials-at-workspace";
+  | "materials-at-workspace"
+  | "next-lesson";
 
 export type MaterialAttachPoint = "pick" | "edit" | "workspace";
 

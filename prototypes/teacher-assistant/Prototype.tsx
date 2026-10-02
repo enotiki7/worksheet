@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PrototypeControls } from "./components/PrototypeControls";
 import { DEFAULT_PAIR, libraryForPair, umkForSubject } from "./mock";
-import { attachPointForScenario, getScenario, isMaterialsScenario, profileForScenario } from "./scenarios";
+import {
+  attachPointForScenario,
+  getScenario,
+  isMaterialsScenario,
+  isNextLessonScenario,
+  profileForScenario,
+} from "./scenarios";
 import { HomeScreen } from "./screens/HomeScreen";
 import { buildLessonContent } from "./lessonContent";
 import {
@@ -43,7 +49,9 @@ function screenFromParams(value: string | null): ScreenId | null {
 }
 
 function defaultScreenForScenario(scenario: ReturnType<typeof getScenario>): ScreenId {
-  if (scenario === "skipped" || scenario === "multi-subject" || isMaterialsScenario(scenario)) return "home";
+  if (scenario === "skipped" || scenario === "multi-subject" || isMaterialsScenario(scenario) || isNextLessonScenario(scenario)) {
+    return "home";
+  }
   return "phone";
 }
 
@@ -52,7 +60,7 @@ function initialScreen(
   screenParam: string | null,
   figmaCapture: boolean,
 ): ScreenId {
-  if (isMaterialsScenario(scenario) && !figmaCapture) return "home";
+  if ((isMaterialsScenario(scenario) || isNextLessonScenario(scenario)) && !figmaCapture) return "home";
   return screenFromParams(screenParam) ?? defaultScreenForScenario(scenario);
 }
 
@@ -85,12 +93,14 @@ export function Prototype() {
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
   const [chatDraft, setChatDraft] = useState("");
   const [collectDraft, setCollectDraft] = useState<TeachingPair>({ ...DEFAULT_PAIR, id: "collect" });
+  const [removedLessonIds, setRemovedLessonIds] = useState<string[]>([]);
 
   useEffect(() => {
     const next = profileForScenario(scenario);
     setProfile(next);
     setLesson(emptyLesson());
     setLessonContent(null);
+    setRemovedLessonIds([]);
     setScreen(initialScreen(scenario, params.get("screen"), figmaCapture));
   }, [scenario, figmaCapture]);
 
@@ -121,17 +131,34 @@ export function Prototype() {
   }, [figmaCapture, scenario, screen, profile.pairs.length]);
 
   useEffect(() => {
+    if (!isNextLessonScenario(scenario) || screen !== "lesson-pick") return;
+    setLesson((prev) => {
+      if (prev.topicId) return prev;
+      return {
+        ...prev,
+        topicId: "l2",
+        topic: "Модуль числа",
+        themeId: "t1",
+        isCreating: false,
+        withoutPlan: false,
+      };
+    });
+  }, [scenario, screen]);
+
+  useEffect(() => {
     if (!["lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace", "lesson-context"].includes(screen)) {
       return;
     }
     const pairId = profile.pairs[0]?.id ?? "";
-    setLesson((prev) => ({
-      ...prev,
-      pairId: prev.pairId || pairId,
-      topicId: prev.topicId || "l2",
-      topic: prev.topic || "Модуль числа",
-      withoutPlan: false,
-    }));
+    setLesson((prev) => {
+      const next = { ...prev, pairId: prev.pairId || pairId };
+      if (screen !== "lesson-pick") {
+        next.topicId = prev.topicId || "l2";
+        next.topic = prev.topic || "Модуль числа";
+        next.withoutPlan = false;
+      }
+      return next;
+    });
   }, [screen, profile.pairs]);
 
   useEffect(() => {
@@ -155,6 +182,15 @@ export function Prototype() {
     if (!activePair) return [];
     return libraryForPair(activePair.subject, activePair.grade);
   }, [activePair]);
+
+  const removeLessonFromPlan = (lessonId: string) => {
+    setRemovedLessonIds((prev) => (prev.includes(lessonId) ? prev : [...prev, lessonId]));
+    setLesson((prev) =>
+      prev.topicId === lessonId
+        ? { ...prev, topicId: "", topic: "", isCreating: false, themeId: "", insertAfterLessonId: null }
+        : prev,
+    );
+  };
 
   const toggleLibraryMaterial = (id: string) => {
     setLesson((prev) => ({
@@ -353,6 +389,9 @@ export function Prototype() {
         libraryMaterials={libraryMaterials}
         showLibraryAttach={attachPoint === "pick"}
         onToggleLibrary={toggleLibraryMaterial}
+        removedLessonIds={removedLessonIds}
+        onRemoveLesson={removeLessonFromPlan}
+        scenario={scenario}
       />
     );
   }

@@ -1,8 +1,19 @@
 import { useState } from "react";
 import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
+import { LessonMaterialIcons } from "../components/LessonMaterialIcons";
 import { previewForLesson } from "../lessonContent";
-import { GRADES, SUBJECTS, lessonInPlan, planForPair, THEMATIC_PLANS, umkForSubject, type KtpTheme } from "../mock";
-import type { LessonDraft, LibraryMaterial, TeachingPair, UserProfile } from "../types";
+import {
+  GRADES,
+  SUBJECTS,
+  lessonInPlan,
+  lessonStatusLabel,
+  planForPair,
+  planForPick,
+  THEMATIC_PLANS,
+  umkForSubject,
+  type KtpTheme,
+} from "../mock";
+import type { LessonDraft, LibraryMaterial, Scenario, TeachingPair, UserProfile } from "../types";
 import { WButton, WCard, WChip, WDropzone, WInput } from "../components/wire";
 
 export function LessonCollectScreen({
@@ -123,13 +134,18 @@ function ThemeAccordion({
   onToggle,
   lesson,
   onLesson,
+  removedLessonIds,
+  onRemoveLesson,
 }: {
   theme: KtpTheme;
   expanded: boolean;
   onToggle: () => void;
   lesson: LessonDraft;
   onLesson: (patch: Partial<LessonDraft>) => void;
+  removedLessonIds: string[];
+  onRemoveLesson: (lessonId: string) => void;
 }) {
+  const visibleLessons = theme.lessons.filter((item) => !removedLessonIds.includes(item.id));
   const startCreate = (afterId: string | null) => {
     onLesson({
       isCreating: true,
@@ -184,25 +200,37 @@ function ThemeAccordion({
         <div className="ta-accordion__body">
           {renderInsert(null, "Новый урок в начале темы")}
 
-          {theme.lessons.map((item) => (
+          {visibleLessons.map((item) => (
             <div key={item.id} className="ta-lesson-slot">
-              <WCard
-                selected={!lesson.isCreating && lesson.topicId === item.id}
-                kicker={`Урок ${item.number} · ${item.hours} ч · ${item.status === "next" ? "следующий" : item.status === "done" ? "проведён" : "в плане"}`}
-                title={item.topic}
-                detail={[item.prevTopic ? `← ${item.prevTopic}` : null, item.nextTopic ? `→ ${item.nextTopic}` : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-                onClick={() =>
-                  onLesson({
-                    topicId: item.id,
-                    topic: item.topic,
-                    themeId: theme.id,
-                    isCreating: false,
-                    withoutPlan: false,
-                  })
-                }
-              />
+              <div className="ta-lesson-row">
+                <WCard
+                  selected={!lesson.isCreating && lesson.topicId === item.id}
+                  kicker={`Урок ${item.number} · ${item.hours} ч · ${lessonStatusLabel(item.status)}`}
+                  title={item.topic}
+                  detail={[item.prevTopic ? `← ${item.prevTopic}` : null, item.nextTopic ? `→ ${item.nextTopic}` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  onClick={() =>
+                    onLesson({
+                      topicId: item.id,
+                      topic: item.topic,
+                      themeId: theme.id,
+                      isCreating: false,
+                      withoutPlan: false,
+                    })
+                  }
+                >
+                  {item.createdMaterials?.length ? <LessonMaterialIcons materials={item.createdMaterials} /> : null}
+                </WCard>
+                <button
+                  type="button"
+                  className="ta-lesson-delete"
+                  aria-label={`Удалить урок «${item.topic}»`}
+                  onClick={() => onRemoveLesson(item.id)}
+                >
+                  Удалить
+                </button>
+              </div>
               {renderInsert(item.id, `Новый урок после «${item.topic}»`)}
             </div>
           ))}
@@ -223,9 +251,13 @@ export function LessonPickScreen({
   libraryMaterials,
   showLibraryAttach,
   onToggleLibrary,
+  removedLessonIds,
+  onRemoveLesson,
+  scenario,
 }: {
   profile: UserProfile;
   pair: TeachingPair;
+  scenario: Scenario;
   lesson: LessonDraft;
   onLesson: (patch: Partial<LessonDraft>) => void;
   onUploadPlan: () => void;
@@ -234,13 +266,15 @@ export function LessonPickScreen({
   libraryMaterials?: LibraryMaterial[];
   showLibraryAttach?: boolean;
   onToggleLibrary?: (id: string) => void;
+  removedLessonIds: string[];
+  onRemoveLesson: (lessonId: string) => void;
 }) {
-  const plan = planForPair(pair) ?? THEMATIC_PLANS.find((item) => item.subject === pair.subject);
+  const plan = planForPick(scenario, pair);
   const [openThemes, setOpenThemes] = useState<Set<string>>(() => new Set(plan?.themes[0]?.id ? [plan.themes[0].id] : []));
 
   const canContinue =
     lesson.withoutPlan || Boolean(lesson.topicId) || (lesson.isCreating && Boolean(lesson.topic.trim()));
-  const hasSelection = Boolean(lesson.topic.trim()) && !lesson.withoutPlan;
+  const hasSelection = Boolean(lesson.topicId) || (lesson.isCreating && Boolean(lesson.topic.trim()));
   const preview = hasSelection ? previewForLesson(lesson.topicId || "custom") : null;
   const placementHint =
     plan && lesson.isCreating
@@ -306,6 +340,8 @@ export function LessonPickScreen({
                   onToggle={() => toggleTheme(theme.id)}
                   lesson={lesson}
                   onLesson={onLesson}
+                  removedLessonIds={removedLessonIds}
+                  onRemoveLesson={onRemoveLesson}
                 />
               ))}
             </div>
@@ -379,9 +415,10 @@ export function LessonPickScreen({
           </>
         ) : (
           <div className="ta-pick__preview-empty">
+            <p className="wf-card-kicker">Превью урока</p>
             <p className="wf-hint">
-              Выберите урок из списка или нажмите «Создать урок» между уроками темы — здесь появится превью с целями,
-              задачами и ключевыми результатами.
+              Выберите урок из списка или загрузите свой КТП — здесь появится превью с целями, задачами и ключевыми
+              результатами.
             </p>
           </div>
         )}

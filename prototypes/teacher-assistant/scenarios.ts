@@ -8,7 +8,12 @@ export const scenarios: Scenario[] = [
   "materials-at-pick",
   "materials-at-edit",
   "materials-at-workspace",
+  "next-lesson",
 ];
+
+export function isNextLessonScenario(scenario: Scenario) {
+  return scenario === "next-lesson";
+}
 
 export function isMaterialsScenario(scenario: Scenario) {
   return scenario === "materials-at-pick" || scenario === "materials-at-edit" || scenario === "materials-at-workspace";
@@ -21,6 +26,7 @@ export const SCENARIO_LABELS: Record<Scenario, string> = {
   "materials-at-pick": "materials-at-pick (на выборе урока)",
   "materials-at-edit": "materials-at-edit (при редактировании)",
   "materials-at-workspace": "materials-at-workspace (в рабочей области)",
+  "next-lesson": "next-lesson (следующий урок)",
 };
 
 export function attachPointForScenario(scenario: Scenario) {
@@ -68,6 +74,18 @@ export function profileForScenario(scenario: Scenario): UserProfile {
       phone: "+7 903 555-12-34",
       roles: ["subject"],
       pairs: [],
+      scheduleFile: "raspisanie_9A.xlsx",
+      planFile: "ktp_algebra_9.docx",
+      skippedOnboarding: false,
+      completedSteps: 4,
+    };
+  }
+
+  if (isNextLessonScenario(scenario)) {
+    return {
+      phone: "+7 903 555-12-34",
+      roles: ["subject"],
+      pairs: [DEFAULT_PAIR],
       scheduleFile: "raspisanie_9A.xlsx",
       planFile: "ktp_algebra_9.docx",
       skippedOnboarding: false,
