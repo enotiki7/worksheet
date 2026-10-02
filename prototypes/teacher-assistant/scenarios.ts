@@ -7,7 +7,6 @@ export const scenarios: Scenario[] = [
   "multi-subject",
   "materials-at-pick",
   "materials-at-edit",
-  "materials-at-workspace",
   "next-lesson",
 ];
 
@@ -16,7 +15,7 @@ export function isNextLessonScenario(scenario: Scenario) {
 }
 
 export function isMaterialsScenario(scenario: Scenario) {
-  return scenario === "materials-at-pick" || scenario === "materials-at-edit" || scenario === "materials-at-workspace";
+  return scenario === "materials-at-pick" || scenario === "materials-at-edit";
 }
 
 export const SCENARIO_LABELS: Record<Scenario, string> = {
@@ -25,14 +24,12 @@ export const SCENARIO_LABELS: Record<Scenario, string> = {
   "multi-subject": "multi-subject",
   "materials-at-pick": "materials-at-pick (на выборе урока)",
   "materials-at-edit": "materials-at-edit (при редактировании)",
-  "materials-at-workspace": "materials-at-workspace (в рабочей области)",
   "next-lesson": "next-lesson (следующий урок)",
 };
 
 export function attachPointForScenario(scenario: Scenario) {
   if (scenario === "materials-at-pick") return "pick" as const;
   if (scenario === "materials-at-edit") return "edit" as const;
-  if (scenario === "materials-at-workspace") return "workspace" as const;
   return null;
 }
 

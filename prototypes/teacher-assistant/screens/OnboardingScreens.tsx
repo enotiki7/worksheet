@@ -1,4 +1,4 @@
-import { GRADES, ROLES, SUBJECTS, umkForSubject } from "../mock";
+import { GRADES, ROLES, SUBJECTS } from "../mock";
 import type { RoleId, TeachingPair } from "../types";
 import { SplitLayout } from "../components/SplitLayout";
 import { WButton, WCard, WChip, WDropzone } from "../components/wire";
@@ -19,7 +19,7 @@ export function OnboardingRoleStep({
   return (
     <SplitLayout
       step={1}
-      total={4}
+      total={2}
       title="Расскажите о вашей работе"
       benefitTitle="Роль помогает настроить сценарии"
       benefit={
@@ -73,22 +73,20 @@ export function OnboardingSubjectStep({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const umk = umkForSubject(draft.subject);
-
   return (
     <SplitLayout
       step={2}
-      total={4}
+      total={2}
       title="Выберите предмет и класс"
       benefitTitle="Профиль педагога сохранится в личном кабинете"
       benefit={
         <>
-          <p>Можно вести несколько предметов в разных классах и по разным УМК. Эти данные потом редактируются в ЛК.</p>
+          <p>Можно вести несколько предметов в разных классах. Эти данные потом редактируются в личном кабинете.</p>
           {pairs.length > 0 ? (
             <ul className="ta-pair-list">
               {pairs.map((pair) => (
                 <li key={pair.id}>
-                  {pair.subject} · {pair.grade} класс · {pair.umk}
+                  {pair.subject} · {pair.grade} класс
                 </li>
               ))}
             </ul>
@@ -103,7 +101,7 @@ export function OnboardingSubjectStep({
       <p className="wf-card-kicker">Предмет</p>
       <div className="wf-row">
         {SUBJECTS.map((subject) => (
-          <WChip key={subject} selected={draft.subject === subject} onClick={() => onDraft({ subject, umk: umkForSubject(subject) })}>
+          <WChip key={subject} selected={draft.subject === subject} onClick={() => onDraft({ subject })}>
             {subject}
           </WChip>
         ))}
@@ -112,16 +110,10 @@ export function OnboardingSubjectStep({
       <p className="wf-card-kicker">Класс / параллель</p>
       <div className="wf-row">
         {GRADES.map((grade) => (
-          <WChip key={grade} selected={draft.grade === grade} onClick={() => onDraft({ grade, umk: umkForSubject(draft.subject) })}>
+          <WChip key={grade} selected={draft.grade === grade} onClick={() => onDraft({ grade })}>
             {grade}
           </WChip>
         ))}
-      </div>
-
-      <p className="wf-card-kicker">УМК / программа</p>
-      <div className="ta-umk-single">
-        <span>{umk}</span>
-        <span className="wf-hint">Определяется автоматически по предмету и классу</span>
       </div>
 
       <div className="wf-footer-actions">
@@ -135,7 +127,7 @@ export function OnboardingSubjectStep({
           {pairs.map((pair) => (
             <div key={pair.id} className="ta-added-pair">
               <span>
-                {pair.subject} · {pair.grade} · {pair.umk}
+                {pair.subject} · {pair.grade} класс
               </span>
               <button type="button" className="ta-link-btn" onClick={() => onRemovePair(pair.id)}>
                 Удалить
@@ -210,7 +202,7 @@ export function OnboardingPlanStep({
       benefitTitle="КТП связывает уроки между собой"
       benefit={
         <p>
-          Если загрузить план сейчас, на главном экране сразу будут доступны темы по ФРП и ФГОС. Каждый урок сохранит
+          Если загрузить план сейчас, на главном экране сразу будут доступны темы по программе. Каждый урок сохранит
           связь с предыдущим и следующим. План можно заменить или дополнить позже в личном кабинете.
         </p>
       }

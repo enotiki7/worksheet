@@ -1,16 +1,19 @@
 import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
-import { MATERIAL_LABELS } from "../lessonContent";
+import { LESSON_TYPES, MATERIAL_LABELS, regenerateLessonPlan } from "../lessonContent";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
 import { WireAiPanel } from "../components/WireAiPanel";
-import { WButton, WCheck } from "../components/wire";
-import type { LessonContent, LessonStep, LibraryMaterial, MaterialId } from "../types";
+import { WButton, WCheck, WChip } from "../components/wire";
+import type { LessonContent, LessonStep, LessonType, LibraryMaterial, MaterialId } from "../types";
 
 type Props = {
   topic: string;
   content: LessonContent;
+  lessonType: LessonType;
+  onLessonType: (value: LessonType) => void;
   onChange: (content: LessonContent) => void;
   onBack: () => void;
-  onGenerate: () => void;
+  onGeneratePlan: () => void;
+  onGenerateMaterials: () => void;
   libraryMaterials?: LibraryMaterial[];
   attachedLibraryIds?: string[];
   showLibraryAttach?: boolean;
@@ -20,9 +23,12 @@ type Props = {
 export function LessonEditScreen({
   topic,
   content,
+  lessonType,
+  onLessonType,
   onChange,
   onBack,
-  onGenerate,
+  onGeneratePlan,
+  onGenerateMaterials,
   libraryMaterials,
   attachedLibraryIds = [],
   showLibraryAttach,
@@ -61,6 +67,11 @@ export function LessonEditScreen({
     onChange({ ...content, [list]: copy });
   };
 
+  const handleGeneratePlan = () => {
+    onChange(regenerateLessonPlan(content, topic));
+    onGeneratePlan();
+  };
+
   return (
     <div className="ta-edit">
       <header className="ta-edit__header">
@@ -72,12 +83,25 @@ export function LessonEditScreen({
           <WButton variant="ghost" onClick={onBack}>
             Назад
           </WButton>
-          <WButton onClick={onGenerate}>Сгенерировать материалы</WButton>
+          <WButton variant="secondary" onClick={handleGeneratePlan}>
+            Сгенерировать план урока
+          </WButton>
         </div>
       </header>
 
       <div className="ta-edit__layout">
         <div className="ta-edit__main">
+          <section className="ta-section">
+            <h2 className="ta-section__title">Тип урока</h2>
+            <div className="wf-row">
+              {LESSON_TYPES.map((item) => (
+                <WChip key={item.id} selected={lessonType === item.id} onClick={() => onLessonType(item.id)}>
+                  {item.label}
+                </WChip>
+              ))}
+            </div>
+          </section>
+
           <section className="ta-section">
             <h2 className="ta-section__title">Цели урока</h2>
             {content.goals.map((goal, index) => (
@@ -236,6 +260,10 @@ export function LessonEditScreen({
               />
             </section>
           ) : null}
+
+          <div className="ta-edit__footer">
+            <WButton onClick={onGenerateMaterials}>Сгенерировать материалы</WButton>
+          </div>
         </div>
 
         <WireAiPanel

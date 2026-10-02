@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
 import { WORKSPACE_SUGGESTS } from "../lessonContent";
 import { LIBRARY_TYPE_LABELS } from "../mock";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
@@ -17,8 +16,6 @@ type Props = {
   onScheduleLesson: () => void;
   libraryMaterials?: LibraryMaterial[];
   attachedLibraryIds?: string[];
-  showLibraryAttach?: boolean;
-  onToggleLibrary?: (id: string) => void;
 };
 
 const TABS: { id: WorkspaceTab; label: string }[] = [
@@ -36,8 +33,6 @@ export function LessonWorkspaceScreen({
   onScheduleLesson,
   libraryMaterials,
   attachedLibraryIds = [],
-  showLibraryAttach,
-  onToggleLibrary,
 }: Props) {
   const [tab, setTab] = useState<WorkspaceTab>("plan");
   const [savedOpen, setSavedOpen] = useState(false);
@@ -117,16 +112,6 @@ export function LessonWorkspaceScreen({
 
       <div className="ta-workspace__layout">
         <div className="ta-workspace__main">
-          {showLibraryAttach && libraryMaterials && onToggleLibrary ? (
-            <ExistingMaterialsPanel
-              title="Вариант C · Добавить из библиотеки"
-              hint="После генерации можно дополнить урок материалами, созданными ранее отдельно."
-              materials={libraryMaterials}
-              selectedIds={attachedLibraryIds}
-              onToggle={onToggleLibrary}
-            />
-          ) : null}
-
           {tab === "plan" ? (
             <>
               <section className="ta-section">

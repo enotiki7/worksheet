@@ -6,16 +6,18 @@ export function WireModal({
   children,
   onClose,
   actions,
+  size = "default",
 }: {
   title?: string;
   children: ReactNode;
   onClose?: () => void;
   actions?: ReactNode;
+  size?: "default" | "wide";
 }) {
   return (
     <div className="ta-modal" role="presentation" onClick={onClose}>
       <div
-        className="ta-modal__dialog"
+        className={["ta-modal__dialog", size === "wide" ? "is-wide" : ""].filter(Boolean).join(" ")}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "ta-modal-title" : undefined}

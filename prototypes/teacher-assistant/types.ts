@@ -31,6 +31,8 @@ export type UserProfile = {
   completedSteps: number;
 };
 
+export type LessonType = "newTopic" | "practice" | "independent" | "control";
+
 export type LessonDraft = {
   pairId: string;
   topicId: string;
@@ -40,6 +42,7 @@ export type LessonDraft = {
   isCreating: boolean;
   withoutPlan: boolean;
   attachedLibraryIds: string[];
+  lessonType: LessonType;
 };
 
 export type LibraryMaterialType = "presentation" | "worksheet" | "task" | "infographic";
@@ -59,10 +62,9 @@ export type Scenario =
   | "multi-subject"
   | "materials-at-pick"
   | "materials-at-edit"
-  | "materials-at-workspace"
   | "next-lesson";
 
-export type MaterialAttachPoint = "pick" | "edit" | "workspace";
+export type MaterialAttachPoint = "pick" | "edit";
 
 export type MaterialId =
   | "presentation"

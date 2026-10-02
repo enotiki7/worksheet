@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PrototypeControls } from "./components/PrototypeControls";
-import { DEFAULT_PAIR, libraryForPair, umkForSubject } from "./mock";
+import { DEFAULT_PAIR, libraryForPair, umkForSubject, isOtherSubject, planForPick, type ThematicPlan } from "./mock";
+import { clonePlan } from "./planMutations";
 import {
   attachPointForScenario,
   getScenario,
@@ -11,20 +12,11 @@ import {
 } from "./scenarios";
 import { HomeScreen } from "./screens/HomeScreen";
 import { buildLessonContent } from "./lessonContent";
-import {
-  LessonCollectScreen,
-  LessonContextScreen,
-  LessonPickScreen,
-} from "./screens/LessonFlowScreens";
+import { LessonContextScreen, LessonPickScreen } from "./screens/LessonFlowScreens";
 import { LessonEditScreen } from "./screens/LessonEditScreen";
 import { LessonGeneratingScreen } from "./screens/LessonGeneratingScreen";
 import { LessonWorkspaceScreen } from "./screens/LessonWorkspaceScreen";
-import {
-  OnboardingPlanStep,
-  OnboardingRoleStep,
-  OnboardingScheduleStep,
-  OnboardingSubjectStep,
-} from "./screens/OnboardingScreens";
+import { OnboardingRoleStep, OnboardingSubjectStep } from "./screens/OnboardingScreens";
 import { PhoneScreen } from "./screens/PhoneScreen";
 import type { LessonContent, LessonDraft, RoleId, ScreenId, TeachingPair, UserProfile } from "./types";
 
@@ -43,8 +35,14 @@ const SCREEN_IDS: ScreenId[] = [
   "lesson-workspace",
 ];
 
+function normalizeScreen(value: ScreenId): ScreenId {
+  if (value === "onboarding-3" || value === "onboarding-4") return "home";
+  if (value === "lesson-collect") return "lesson-pick";
+  return value;
+}
+
 function screenFromParams(value: string | null): ScreenId | null {
-  if (value && SCREEN_IDS.includes(value as ScreenId)) return value as ScreenId;
+  if (value && SCREEN_IDS.includes(value as ScreenId)) return normalizeScreen(value as ScreenId);
   return null;
 }
 
@@ -74,6 +72,7 @@ function emptyLesson(): LessonDraft {
     isCreating: false,
     withoutPlan: false,
     attachedLibraryIds: [],
+    lessonType: "newTopic",
   };
 }
 
@@ -92,17 +91,34 @@ export function Prototype() {
   const [lesson, setLesson] = useState<LessonDraft>(emptyLesson);
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
   const [chatDraft, setChatDraft] = useState("");
-  const [collectDraft, setCollectDraft] = useState<TeachingPair>({ ...DEFAULT_PAIR, id: "collect" });
-  const [removedLessonIds, setRemovedLessonIds] = useState<string[]>([]);
+  const [pickDraft, setPickDraft] = useState<TeachingPair>({ id: "pick", subject: "", grade: "", umk: "" });
+  const [planCache, setPlanCache] = useState<Record<string, ThematicPlan>>({});
 
   useEffect(() => {
     const next = profileForScenario(scenario);
     setProfile(next);
     setLesson(emptyLesson());
     setLessonContent(null);
-    setRemovedLessonIds([]);
+    setPlanCache({});
     setScreen(initialScreen(scenario, params.get("screen"), figmaCapture));
   }, [scenario, figmaCapture]);
+
+  const planKey =
+    pickDraft.subject && pickDraft.grade && !isOtherSubject(pickDraft.subject)
+      ? `${scenario}:${pickDraft.subject}:${pickDraft.grade}`
+      : null;
+
+  const activePlan = planKey ? planCache[planKey] : undefined;
+
+  useEffect(() => {
+    if (!planKey) return;
+    setPlanCache((prev) => {
+      if (prev[planKey]) return prev;
+      const base = planForPick(scenario, pickDraft);
+      if (!base) return prev;
+      return { ...prev, [planKey]: clonePlan(base) };
+    });
+  }, [planKey, scenario, pickDraft.subject, pickDraft.grade]);
 
   useEffect(() => {
     if (!figmaCapture || !isMaterialsScenario(scenario)) return;
@@ -114,36 +130,42 @@ export function Prototype() {
       ...prev,
       pairs: [{ ...DEFAULT_PAIR, id: "pair-1" }],
     }));
+    setPickDraft({ id: "pick", subject: DEFAULT_PAIR.subject, grade: DEFAULT_PAIR.grade, umk: DEFAULT_PAIR.umk });
     setLesson((prev) => ({
       ...prev,
       pairId: "pair-1",
       topicId: "l2",
-      topic: "Модуль числа",
+      topic: "Иррациональные числа. Множество действительных чисел",
       attachedLibraryIds:
         point === "pick"
           ? ["lib-pres-1", "lib-sheet-1"]
           : point === "edit"
             ? ["lib-task-1", "lib-sheet-1"]
-            : point === "workspace"
-              ? ["lib-pres-1", "lib-info-1", "lib-task-1"]
-              : prev.attachedLibraryIds,
+            : prev.attachedLibraryIds,
     }));
   }, [figmaCapture, scenario, screen, profile.pairs.length]);
 
   useEffect(() => {
     if (!isNextLessonScenario(scenario) || screen !== "lesson-pick") return;
+    setPickDraft({ id: "pick", subject: DEFAULT_PAIR.subject, grade: DEFAULT_PAIR.grade, umk: DEFAULT_PAIR.umk });
     setLesson((prev) => {
       if (prev.topicId) return prev;
       return {
         ...prev,
+        pairId: "pair-1",
         topicId: "l2",
-        topic: "Модуль числа",
+        topic: "Иррациональные числа. Множество действительных чисел",
         themeId: "t1",
         isCreating: false,
         withoutPlan: false,
       };
     });
   }, [scenario, screen]);
+
+  useEffect(() => {
+    if (!figmaCapture || !isMaterialsScenario(scenario) || screen !== "lesson-pick") return;
+    setPickDraft({ id: "pick", subject: DEFAULT_PAIR.subject, grade: DEFAULT_PAIR.grade, umk: DEFAULT_PAIR.umk });
+  }, [figmaCapture, scenario, screen]);
 
   useEffect(() => {
     if (!["lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace", "lesson-context"].includes(screen)) {
@@ -154,7 +176,7 @@ export function Prototype() {
       const next = { ...prev, pairId: prev.pairId || pairId };
       if (screen !== "lesson-pick") {
         next.topicId = prev.topicId || "l2";
-        next.topic = prev.topic || "Модуль числа";
+        next.topic = prev.topic || "Иррациональные числа. Множество действительных чисел";
         next.withoutPlan = false;
       }
       return next;
@@ -163,7 +185,7 @@ export function Prototype() {
 
   useEffect(() => {
     if (!["lesson-edit", "lesson-generating", "lesson-workspace"].includes(screen) || lessonContent) return;
-    const topic = lesson.topic || "Модуль числа";
+    const topic = lesson.topic || "Иррациональные числа. Множество действительных чисел";
     const topicId = lesson.topicId || "l2";
     setLessonContent(buildLessonContent(topicId, topic));
     if (!lesson.topic) {
@@ -171,25 +193,16 @@ export function Prototype() {
     }
   }, [screen, lessonContent, lesson.topic, lesson.topicId]);
 
-  const activePair = useMemo(
-    () => profile.pairs.find((item) => item.id === lesson.pairId) ?? profile.pairs[0],
-    [profile.pairs, lesson.pairId],
-  );
-
   const attachPoint = attachPointForScenario(scenario);
 
   const libraryMaterials = useMemo(() => {
-    if (!activePair) return [];
-    return libraryForPair(activePair.subject, activePair.grade);
-  }, [activePair]);
+    if (!pickDraft.subject || !pickDraft.grade || isOtherSubject(pickDraft.subject)) return [];
+    return libraryForPair(pickDraft.subject, pickDraft.grade);
+  }, [pickDraft.subject, pickDraft.grade]);
 
-  const removeLessonFromPlan = (lessonId: string) => {
-    setRemovedLessonIds((prev) => (prev.includes(lessonId) ? prev : [...prev, lessonId]));
-    setLesson((prev) =>
-      prev.topicId === lessonId
-        ? { ...prev, topicId: "", topic: "", isCreating: false, themeId: "", insertAfterLessonId: null }
-        : prev,
-    );
+  const setActivePlan = (plan: ThematicPlan) => {
+    if (!planKey) return;
+    setPlanCache((prev) => ({ ...prev, [planKey]: plan }));
   };
 
   const toggleLibraryMaterial = (id: string) => {
@@ -209,30 +222,55 @@ export function Prototype() {
   };
 
   const finishOnboarding = () => {
-    patchProfile({ completedSteps: 4 });
+    patchProfile({ completedSteps: 2 });
     setScreen("home");
   };
 
+  const openLessonPick = (initial?: TeachingPair) => {
+    const pair = initial ?? profile.pairs[0];
+    setPickDraft(
+      pair
+        ? { id: "pick", subject: pair.subject, grade: pair.grade, umk: pair.umk }
+        : { id: "pick", subject: "", grade: "", umk: "" },
+    );
+    if (pair) setLesson((prev) => ({ ...prev, pairId: pair.id }));
+    setScreen("lesson-pick");
+  };
+
   const startPrepareLesson = () => {
-    if (profile.pairs.length === 0) {
-      setCollectDraft({ ...DEFAULT_PAIR, id: "collect" });
-      setScreen("lesson-collect");
-      return;
-    }
     if (profile.pairs.length > 1) {
       setLesson((prev) => ({ ...prev, pairId: profile.pairs[0].id }));
       setScreen("lesson-context");
       return;
     }
-    setLesson((prev) => ({ ...prev, pairId: profile.pairs[0].id }));
-    setScreen("lesson-pick");
+    openLessonPick(profile.pairs[0]);
   };
 
-  const saveCollect = () => {
-    const pair = { ...collectDraft, umk: umkForSubject(collectDraft.subject), id: nextPairId(profile.pairs) };
-    patchProfile({ pairs: [...profile.pairs, pair] });
-    setLesson((prev) => ({ ...prev, pairId: pair.id }));
-    setScreen("lesson-pick");
+  const handlePickDraft = (patch: Partial<TeachingPair>) => {
+    setPickDraft((prev) => ({ ...prev, ...patch }));
+    if (patch.subject !== undefined || patch.grade !== undefined) {
+      setLesson((prev) => ({
+        ...emptyLesson(),
+        pairId: prev.pairId,
+        lessonType: prev.lessonType,
+      }));
+    }
+  };
+
+  const continueFromPick = () => {
+    if (pickDraft.subject && pickDraft.grade) {
+      const exists = profile.pairs.some((item) => item.subject === pickDraft.subject && item.grade === pickDraft.grade);
+      if (!exists) {
+        const pair = {
+          ...pickDraft,
+          umk: umkForSubject(pickDraft.subject),
+          id: nextPairId(profile.pairs),
+        };
+        patchProfile({ pairs: [...profile.pairs, pair] });
+        setLesson((prev) => ({ ...prev, pairId: pair.id }));
+      }
+    }
+    openLessonEdit();
   };
 
   const openLessonEdit = () => {
@@ -249,9 +287,7 @@ export function Prototype() {
 
   const fillGap = (gap: string) => {
     if (gap.includes("роль")) setScreen("onboarding-1");
-    else if (gap.includes("предмет")) setScreen("onboarding-2");
-    else if (gap.includes("расписание")) setScreen("onboarding-3");
-    else setScreen("onboarding-4");
+    else setScreen("onboarding-2");
   };
 
   const setScenario = (value: typeof scenario) => {
@@ -313,31 +349,7 @@ export function Prototype() {
         onRemovePair={(id) => patchProfile({ pairs: profile.pairs.filter((item) => item.id !== id) })}
         onSkip={skipOnboarding}
         onBack={() => setScreen("onboarding-1")}
-        onNext={() => setScreen("onboarding-3")}
-      />
-    );
-  }
-
-  if (screen === "onboarding-3") {
-    content = (
-      <OnboardingScheduleStep
-        fileName={profile.scheduleFile}
-        onPick={() => patchProfile({ scheduleFile: "raspisanie_9A.xlsx", completedSteps: Math.max(profile.completedSteps, 3) })}
-        onSkip={skipOnboarding}
-        onBack={() => setScreen("onboarding-2")}
-        onNext={() => setScreen("onboarding-4")}
-      />
-    );
-  }
-
-  if (screen === "onboarding-4") {
-    content = (
-      <OnboardingPlanStep
-        fileName={profile.planFile}
-        onPick={() => patchProfile({ planFile: "ktp_algebra_9.docx", completedSteps: 4 })}
-        onSkip={skipOnboarding}
-        onBack={() => setScreen("onboarding-3")}
-        onFinish={finishOnboarding}
+        onNext={finishOnboarding}
       />
     );
   }
@@ -354,44 +366,37 @@ export function Prototype() {
     );
   }
 
-  if (screen === "lesson-collect") {
-    content = (
-      <LessonCollectScreen draft={collectDraft} onDraft={(patch) => setCollectDraft((prev) => ({ ...prev, ...patch }))} onSave={saveCollect} onBack={() => setScreen("home")} />
-    );
-  }
-
   if (screen === "lesson-context") {
     content = (
       <LessonContextScreen
         pairs={profile.pairs}
         selectedId={lesson.pairId}
         onSelect={(id) => setLesson((prev) => ({ ...prev, pairId: id }))}
-        onContinue={() => setScreen("lesson-pick")}
+        onContinue={() => {
+          const pair = profile.pairs.find((item) => item.id === lesson.pairId) ?? profile.pairs[0];
+          openLessonPick(pair);
+        }}
         onBack={() => setScreen("home")}
       />
     );
   }
 
-  if (screen === "lesson-pick" && activePair) {
+  if (screen === "lesson-pick") {
     content = (
       <LessonPickScreen
         profile={profile}
-        pair={activePair}
+        draft={pickDraft}
+        onDraft={handlePickDraft}
+        plan={activePlan}
+        onPlanChange={setActivePlan}
         lesson={lesson}
         onLesson={(patch) => setLesson((prev) => ({ ...prev, ...patch }))}
-        onUploadPlan={() => patchProfile({ planFile: "ktp_upload.docx" })}
-        onContinue={openLessonEdit}
-        onBack={() => {
-          if (isMaterialsScenario(scenario)) setScreen("lesson-collect");
-          else if (profile.pairs.length > 1) setScreen("lesson-context");
-          else setScreen("home");
-        }}
+        onUploadPlan={() => patchProfile({ planFile: "tematicheskiy_plan.docx" })}
+        onContinue={continueFromPick}
+        onBack={() => (profile.pairs.length > 1 ? setScreen("lesson-context") : setScreen("home"))}
         libraryMaterials={libraryMaterials}
         showLibraryAttach={attachPoint === "pick"}
         onToggleLibrary={toggleLibraryMaterial}
-        removedLessonIds={removedLessonIds}
-        onRemoveLesson={removeLessonFromPlan}
-        scenario={scenario}
       />
     );
   }
@@ -401,9 +406,12 @@ export function Prototype() {
       <LessonEditScreen
         topic={lesson.topic}
         content={lessonContent}
+        lessonType={lesson.lessonType}
+        onLessonType={(lessonType) => setLesson((prev) => ({ ...prev, lessonType }))}
         onChange={setLessonContent}
         onBack={() => setScreen("lesson-pick")}
-        onGenerate={() => setScreen("lesson-generating")}
+        onGeneratePlan={() => undefined}
+        onGenerateMaterials={() => setScreen("lesson-generating")}
         libraryMaterials={libraryMaterials}
         attachedLibraryIds={lesson.attachedLibraryIds}
         showLibraryAttach={attachPoint === "edit"}
@@ -427,8 +435,6 @@ export function Prototype() {
         onScheduleLesson={() => setScreen("home")}
         libraryMaterials={libraryMaterials}
         attachedLibraryIds={lesson.attachedLibraryIds}
-        showLibraryAttach={attachPoint === "workspace"}
-        onToggleLibrary={toggleLibraryMaterial}
       />
     );
   }

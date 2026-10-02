@@ -1,4 +1,5 @@
 import type { LibraryMaterial, MaterialId, RoleId, Scenario, TeachingPair } from "./types";
+import { ALGEBRA_9_THEMATIC_PLAN } from "./data/algebra-9-thematic-plan";
 
 export const ROLES: { id: RoleId; title: string; detail: string; benefit: string }[] = [
   {
@@ -6,7 +7,7 @@ export const ROLES: { id: RoleId; title: string; detail: string; benefit: string
     title: "Учитель-предметник",
     detail: "Веду один или несколько предметов в классах",
     benefit:
-      "Система подберёт КТП по ФРП и ФГОС, предложит уроки в логике программы и сгенерирует материалы под ваш предмет.",
+      "Система подберёт типовой КТП, предложит уроки в логике программы и сгенерирует материалы под ваш предмет.",
   },
   {
     id: "classTeacher",
@@ -24,12 +25,18 @@ export const ROLES: { id: RoleId; title: string; detail: string; benefit: string
   },
 ];
 
-export const SUBJECTS = ["Алгебра", "Геометрия", "Русский язык", "Физика", "История", "Биология"];
+export const OTHER_SUBJECT = "Другой";
+
+export const SUBJECTS = ["Алгебра", "Геометрия", "Русский язык", "Физика", "История", "Биология", OTHER_SUBJECT];
+
+export function isOtherSubject(subject: string) {
+  return subject === OTHER_SUBJECT;
+}
 
 export const GRADES = ["5", "6", "7", "8", "9", "10", "11"];
 
 export const UMK_BY_SUBJECT: Record<string, string> = {
-  Алгебра: "Виленкин 7–9",
+  Алгебра: "Алгебра 7–9",
   Геометрия: "Атанасян 7–9",
   "Русский язык": "Баранов 5–9",
   Физика: "Пёрышкин 7–9",
@@ -45,7 +52,7 @@ export const DEFAULT_PAIR: TeachingPair = {
   id: "pair-1",
   subject: "Алгебра",
   grade: "9",
-  umk: "Виленкин 7–9",
+  umk: "Алгебра 7–9",
 };
 
 export const CHAT_SUGGESTS = [
@@ -65,7 +72,7 @@ export const LIBRARY_MATERIALS: LibraryMaterial[] = [
   {
     id: "lib-pres-1",
     type: "presentation",
-    title: "Модуль числа · объяснение",
+    title: "Действительные числа · объяснение",
     subject: "Алгебра",
     grade: "9",
     updatedAt: "12 сен 2026",
@@ -136,6 +143,7 @@ export type KtpLesson = {
   number: number;
   topic: string;
   hours: number;
+  lessonKind?: string;
   status: "done" | "next" | "planned";
   prevTopic?: string;
   nextTopic?: string;
@@ -151,6 +159,7 @@ export function lessonStatusLabel(status: KtpLesson["status"]) {
 }
 
 export function planForPick(scenario: Scenario, pair: TeachingPair): ThematicPlan | undefined {
+  if (!pair.subject || !pair.grade || isOtherSubject(pair.subject)) return undefined;
   const base = planForPair(pair) ?? THEMATIC_PLANS.find((item) => item.subject === pair.subject && item.grade === pair.grade);
   if (!base) return undefined;
 
@@ -191,6 +200,7 @@ export type KtpTheme = {
   hours: number;
   independentWorks: number;
   controlWorks: number;
+  controlForms?: string;
   lessons: KtpLesson[];
 };
 
@@ -205,106 +215,18 @@ export type ThematicPlan = {
   themes: KtpTheme[];
 };
 
+function cloneThematicPlan(plan: typeof ALGEBRA_9_THEMATIC_PLAN): ThematicPlan {
+  return {
+    ...plan,
+    themes: plan.themes.map((theme) => ({
+      ...theme,
+      lessons: theme.lessons.map((lesson) => ({ ...lesson })),
+    })),
+  };
+}
+
 export const THEMATIC_PLANS: ThematicPlan[] = [
-  {
-    id: "alg-9-vilenkin",
-    subject: "Алгебра",
-    grade: "9",
-    umk: "Виленкин 7–9",
-    title: "Алгебра 9 класс · Виленкин",
-    hours: 140,
-    frp: "ФРП СОО · ФГОС СОО · базовый уровень",
-    themes: [
-      {
-        id: "t1",
-        title: "Действительные числа: сравнение и модуль",
-        hours: 6,
-        independentWorks: 1,
-        controlWorks: 0,
-        lessons: [
-          {
-            id: "l1",
-            number: 3,
-            topic: "Сравнение действительных чисел",
-            hours: 1,
-            status: "planned",
-            nextTopic: "Модуль числа",
-          },
-          {
-            id: "l2",
-            number: 4,
-            topic: "Модуль числа",
-            hours: 1,
-            status: "planned",
-            prevTopic: "Сравнение действительных чисел",
-            nextTopic: "Неравенства с модулем",
-          },
-          {
-            id: "l1a",
-            number: 5,
-            topic: "Неравенства с модулем",
-            hours: 1,
-            status: "planned",
-            prevTopic: "Модуль числа",
-            nextTopic: "График функции модуля",
-          },
-          {
-            id: "l1b",
-            number: 6,
-            topic: "График функции модуля",
-            hours: 1,
-            status: "planned",
-            prevTopic: "Неравенства с модулем",
-            nextTopic: "Уравнения с модулем",
-          },
-          {
-            id: "l1c",
-            number: 7,
-            topic: "Уравнения с модулем",
-            hours: 1,
-            status: "planned",
-            prevTopic: "График функции модуля",
-            nextTopic: "Свойства модуля",
-          },
-          {
-            id: "l1d",
-            number: 8,
-            topic: "Свойства модуля",
-            hours: 1,
-            status: "planned",
-            prevTopic: "Уравнения с модулем",
-            nextTopic: "Приближённые вычисления",
-          },
-        ],
-      },
-      {
-        id: "t2",
-        title: "Приближённые вычисления и корни",
-        hours: 5,
-        independentWorks: 2,
-        controlWorks: 1,
-        lessons: [
-          {
-            id: "l3",
-            number: 5,
-            topic: "Приближённые вычисления",
-            hours: 2,
-            status: "planned",
-            prevTopic: "Свойства модуля",
-            nextTopic: "Квадратные корни",
-          },
-          {
-            id: "l4",
-            number: 6,
-            topic: "Квадратные корни",
-            hours: 3,
-            status: "planned",
-            prevTopic: "Приближённые вычисления",
-          },
-        ],
-      },
-    ],
-  },
+  cloneThematicPlan(ALGEBRA_9_THEMATIC_PLAN),
   {
     id: "rus-8-baranov",
     subject: "Русский язык",
@@ -312,7 +234,7 @@ export const THEMATIC_PLANS: ThematicPlan[] = [
     umk: "Баранов 5–9",
     title: "Русский язык 8 класс · Баранов",
     hours: 102,
-    frp: "ФРП СОО · ФГОС СОО",
+    frp: "ФРП СОО",
     themes: [
       {
         id: "rt1",
@@ -354,26 +276,13 @@ export function profileMissingForLesson(profile: { pairs: TeachingPair[] }) {
   return profile.pairs.length === 0;
 }
 
-export function profileGaps(profile: {
-  roles: RoleId[];
-  pairs: TeachingPair[];
-  scheduleFile: string | null;
-  planFile: string | null;
-  skippedOnboarding: boolean;
-}) {
+export function profileGaps(profile: { roles: RoleId[]; pairs: TeachingPair[] }) {
   const gaps: string[] = [];
   if (profile.roles.length === 0) gaps.push("роль");
   if (profile.pairs.length === 0) gaps.push("предмет и класс");
-  if (!profile.scheduleFile) gaps.push("расписание");
-  if (!profile.planFile && profile.pairs.every((pair) => !planForPair(pair))) gaps.push("тематический план");
   return gaps;
 }
 
-export function isHomeComplete(profile: {
-  roles: RoleId[];
-  pairs: TeachingPair[];
-  scheduleFile: string | null;
-  planFile: string | null;
-}) {
-  return profile.roles.length > 0 && profile.pairs.length > 0 && Boolean(profile.scheduleFile) && Boolean(profile.planFile);
+export function isHomeComplete(profile: { roles: RoleId[]; pairs: TeachingPair[] }) {
+  return profile.roles.length > 0 && profile.pairs.length > 0;
 }

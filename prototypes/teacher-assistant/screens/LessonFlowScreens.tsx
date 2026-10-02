@@ -1,91 +1,26 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
 import { LessonMaterialIcons } from "../components/LessonMaterialIcons";
+import { ThematicPlanEditModal } from "../components/ThematicPlanEditModal";
 import { previewForLesson } from "../lessonContent";
 import {
   GRADES,
   SUBJECTS,
+  isOtherSubject,
   lessonInPlan,
   lessonStatusLabel,
-  planForPair,
-  planForPick,
-  THEMATIC_PLANS,
-  umkForSubject,
   type KtpTheme,
+  type ThematicPlan,
 } from "../mock";
-import type { LessonDraft, LibraryMaterial, Scenario, TeachingPair, UserProfile } from "../types";
+import {
+  addLessonToPlan,
+  countPlanLessons,
+  filterPlanByQuery,
+  moveLessonInTheme,
+  removeLessonFromPlan,
+} from "../planMutations";
+import type { LessonDraft, LibraryMaterial, TeachingPair, UserProfile } from "../types";
 import { WButton, WCard, WChip, WDropzone, WInput } from "../components/wire";
-
-export function LessonCollectScreen({
-  draft,
-  onDraft,
-  onSave,
-  onBack,
-}: {
-  draft: TeachingPair;
-  onDraft: (patch: Partial<TeachingPair>) => void;
-  onSave: () => void;
-  onBack: () => void;
-}) {
-  const umk = umkForSubject(draft.subject);
-  const canSave = Boolean(draft.subject && draft.grade);
-  const planPreview =
-    draft.subject && draft.grade
-      ? planForPair({ id: "preview", subject: draft.subject, grade: draft.grade, umk }) ??
-        THEMATIC_PLANS.find((item) => item.subject === draft.subject && item.grade === draft.grade)
-      : null;
-
-  return (
-    <div className="ta-flow">
-      <p className="wf-badge">Подготовка урока · шаг 1</p>
-      <h1 className="wf-h1">Расскажите, для кого готовим урок</h1>
-      <p className="wf-lead">Эти данные сохранятся в личном кабинете и подставятся в следующий раз.</p>
-
-      <p className="wf-card-kicker">Предмет</p>
-      <div className="wf-row">
-        {SUBJECTS.map((subject) => (
-          <WChip key={subject} selected={draft.subject === subject} onClick={() => onDraft({ subject, umk: umkForSubject(subject) })}>
-            {subject}
-          </WChip>
-        ))}
-      </div>
-
-      <p className="wf-card-kicker">Класс</p>
-      <div className="wf-row">
-        {GRADES.map((grade) => (
-          <WChip key={grade} selected={draft.grade === grade} onClick={() => onDraft({ grade, umk: umkForSubject(draft.subject) })}>
-            {grade}
-          </WChip>
-        ))}
-      </div>
-
-      <p className="wf-card-kicker">УМК / программа</p>
-      <div className="ta-umk-single">
-        <span>{umk}</span>
-        <span className="wf-hint">Определяется автоматически по предмету и классу</span>
-      </div>
-
-      {planPreview ? (
-        <div className="wf-card ta-collect-plan">
-          <p className="wf-card-kicker">Тематическое планирование</p>
-          <p className="wf-card-title">{planPreview.title}</p>
-          <p className="wf-card-detail">
-            {planPreview.hours} ч · {planPreview.frp} · {planPreview.themes.length} тем
-          </p>
-        </div>
-      ) : null}
-
-      <div className="wf-footer-actions">
-        <WButton variant="ghost" onClick={onBack}>
-          На главный
-        </WButton>
-        <WButton onClick={onSave} disabled={!canSave}>
-          Сохранить и продолжить
-        </WButton>
-      </div>
-    </div>
-  );
-}
 
 export function LessonContextScreen({
   pairs,
@@ -102,15 +37,14 @@ export function LessonContextScreen({
 }) {
   return (
     <div className="ta-flow">
-      <p className="wf-badge">Подготовка урока · шаг 2</p>
+      <p className="wf-badge">Подготовка урока</p>
       <h1 className="wf-h1">Для какого класса создаём урок?</h1>
-      <p className="wf-lead">У вас несколько предметов — выберите связку «предмет · класс · УМК».</p>
+      <p className="wf-lead">У вас несколько предметов — выберите связку «предмет · класс».</p>
       <div className="wf-stack">
         {pairs.map((pair) => (
           <WCard
             key={pair.id}
             title={`${pair.subject} · ${pair.grade} класс`}
-            detail={pair.umk}
             selected={selectedId === pair.id}
             onClick={() => onSelect(pair.id)}
           />
@@ -134,19 +68,25 @@ function ThemeAccordion({
   onToggle,
   lesson,
   onLesson,
-  removedLessonIds,
   onRemoveLesson,
+  onMoveLesson,
+  onAddLesson,
+  searchQuery,
 }: {
   theme: KtpTheme;
   expanded: boolean;
   onToggle: () => void;
   lesson: LessonDraft;
   onLesson: (patch: Partial<LessonDraft>) => void;
-  removedLessonIds: string[];
   onRemoveLesson: (lessonId: string) => void;
+  onMoveLesson: (themeId: string, lessonId: string, direction: -1 | 1) => void;
+  onAddLesson: (themeId: string, afterLessonId: string | null, topic: string) => void;
+  searchQuery: string;
 }) {
-  const visibleLessons = theme.lessons.filter((item) => !removedLessonIds.includes(item.id));
+  const [creatingAfter, setCreatingAfter] = useState<string | null | false>(false);
+
   const startCreate = (afterId: string | null) => {
+    setCreatingAfter(afterId);
     onLesson({
       isCreating: true,
       themeId: theme.id,
@@ -157,8 +97,18 @@ function ThemeAccordion({
     });
   };
 
-  const isInsertActive = (afterId: string | null) =>
-    lesson.isCreating && lesson.themeId === theme.id && lesson.insertAfterLessonId === afterId;
+  const cancelCreate = () => {
+    setCreatingAfter(false);
+    onLesson({ isCreating: false, topic: "", topicId: "" });
+  };
+
+  const confirmCreate = (afterId: string | null) => {
+    if (!lesson.topic.trim()) return;
+    onAddLesson(theme.id, afterId, lesson.topic.trim());
+    cancelCreate();
+  };
+
+  const isInsertActive = (afterId: string | null) => creatingAfter === afterId && lesson.isCreating;
 
   const renderInsert = (afterId: string | null, label: string) => {
     if (isInsertActive(afterId)) {
@@ -171,7 +121,10 @@ function ThemeAccordion({
             onChange={(event) => onLesson({ topic: event.target.value, topicId: "", withoutPlan: false })}
           />
           <div className="ta-create-lesson__actions">
-            <WButton variant="ghost" onClick={() => onLesson({ isCreating: false, topic: "", topicId: "" })}>
+            <WButton onClick={() => confirmCreate(afterId)} disabled={!lesson.topic.trim()}>
+              Добавить
+            </WButton>
+            <WButton variant="ghost" onClick={cancelCreate}>
               Отмена
             </WButton>
           </div>
@@ -187,25 +140,35 @@ function ThemeAccordion({
   };
 
   return (
-    <div className={["ta-accordion", expanded ? "is-open" : ""].filter(Boolean).join(" ")}>
+    <div className={["ta-accordion", expanded ? "is-open" : ""].filter(Boolean).join(" ")} id={`theme-${theme.id}`}>
       <button type="button" className="ta-accordion__head" onClick={onToggle}>
         <span className="ta-accordion__chevron">{expanded ? "▾" : "▸"}</span>
         <span className="ta-accordion__title">{theme.title}</span>
         <span className="ta-accordion__meta">
-          {theme.hours} ч · {theme.independentWorks} самостоятельных · {theme.controlWorks} контрольных
+          {theme.hours} ч
+          {theme.controlForms
+            ? ` · ${theme.controlForms}`
+            : ` · ${theme.independentWorks} самостоятельных · ${theme.controlWorks} контрольных`}
         </span>
       </button>
 
       {expanded ? (
         <div className="ta-accordion__body">
-          {renderInsert(null, "Новый урок в начале темы")}
+          {!searchQuery ? renderInsert(null, "Новый урок в начале темы") : null}
 
-          {visibleLessons.map((item) => (
-            <div key={item.id} className="ta-lesson-slot">
+          {theme.lessons.map((item, index) => (
+            <div key={item.id} className="ta-lesson-slot" id={`lesson-${item.id}`}>
               <div className="ta-lesson-row">
                 <WCard
                   selected={!lesson.isCreating && lesson.topicId === item.id}
-                  kicker={`Урок ${item.number} · ${item.hours} ч · ${lessonStatusLabel(item.status)}`}
+                  kicker={[
+                    `Урок ${item.number}`,
+                    `${item.hours} ч`,
+                    item.lessonKind,
+                    lessonStatusLabel(item.status),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   title={item.topic}
                   detail={[item.prevTopic ? `← ${item.prevTopic}` : null, item.nextTopic ? `→ ${item.nextTopic}` : null]
                     .filter(Boolean)
@@ -222,6 +185,24 @@ function ThemeAccordion({
                 >
                   {item.createdMaterials?.length ? <LessonMaterialIcons materials={item.createdMaterials} /> : null}
                 </WCard>
+                <div className="ta-lesson-reorder">
+                  <WButton
+                    variant="ghost"
+                    onClick={() => onMoveLesson(theme.id, item.id, -1)}
+                    disabled={index === 0}
+                    aria-label={`Переместить «${item.topic}» выше`}
+                  >
+                    ↑
+                  </WButton>
+                  <WButton
+                    variant="ghost"
+                    onClick={() => onMoveLesson(theme.id, item.id, 1)}
+                    disabled={index === theme.lessons.length - 1}
+                    aria-label={`Переместить «${item.topic}» ниже`}
+                  >
+                    ↓
+                  </WButton>
+                </div>
                 <button
                   type="button"
                   className="ta-lesson-delete"
@@ -231,9 +212,13 @@ function ThemeAccordion({
                   Удалить
                 </button>
               </div>
-              {renderInsert(item.id, `Новый урок после «${item.topic}»`)}
+              {!searchQuery ? renderInsert(item.id, `Новый урок после «${item.topic}»`) : null}
             </div>
           ))}
+
+          {searchQuery && theme.lessons.length === 0 ? (
+            <p className="wf-hint ta-pick-search__empty">В этом разделе нет уроков по запросу.</p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -242,7 +227,10 @@ function ThemeAccordion({
 
 export function LessonPickScreen({
   profile,
-  pair,
+  draft,
+  onDraft,
+  plan,
+  onPlanChange,
   lesson,
   onLesson,
   onUploadPlan,
@@ -251,13 +239,12 @@ export function LessonPickScreen({
   libraryMaterials,
   showLibraryAttach,
   onToggleLibrary,
-  removedLessonIds,
-  onRemoveLesson,
-  scenario,
 }: {
   profile: UserProfile;
-  pair: TeachingPair;
-  scenario: Scenario;
+  draft: TeachingPair;
+  onDraft: (patch: Partial<TeachingPair>) => void;
+  plan?: ThematicPlan;
+  onPlanChange: (plan: ThematicPlan) => void;
   lesson: LessonDraft;
   onLesson: (patch: Partial<LessonDraft>) => void;
   onUploadPlan: () => void;
@@ -266,15 +253,38 @@ export function LessonPickScreen({
   libraryMaterials?: LibraryMaterial[];
   showLibraryAttach?: boolean;
   onToggleLibrary?: (id: string) => void;
-  removedLessonIds: string[];
-  onRemoveLesson: (lessonId: string) => void;
 }) {
-  const plan = planForPick(scenario, pair);
+  const hasSubjectGrade = Boolean(draft.subject && draft.grade);
+  const otherSubject = isOtherSubject(draft.subject);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [planEditorOpen, setPlanEditorOpen] = useState(false);
   const [openThemes, setOpenThemes] = useState<Set<string>>(() => new Set(plan?.themes[0]?.id ? [plan.themes[0].id] : []));
 
-  const canContinue =
-    lesson.withoutPlan || Boolean(lesson.topicId) || (lesson.isCreating && Boolean(lesson.topic.trim()));
-  const hasSelection = Boolean(lesson.topicId) || (lesson.isCreating && Boolean(lesson.topic.trim()));
+  const filteredPlan = useMemo(() => (plan ? filterPlanByQuery(plan, searchQuery) : undefined), [plan, searchQuery]);
+  const totalLessons = plan ? countPlanLessons(plan) : 0;
+  const visibleLessons = filteredPlan ? countPlanLessons(filteredPlan) : 0;
+
+  useEffect(() => {
+    if (!plan?.themes[0]?.id) return;
+    setOpenThemes(new Set([plan.themes[0].id]));
+    setSearchQuery("");
+  }, [draft.subject, draft.grade, plan?.id]);
+
+  useEffect(() => {
+    if (!searchQuery || !filteredPlan) return;
+    setOpenThemes(new Set(filteredPlan.themes.map((theme) => theme.id)));
+  }, [searchQuery, filteredPlan]);
+
+  useEffect(() => {
+    if (!lesson.topicId) return;
+    const theme = plan?.themes.find((item) => item.lessons.some((entry) => entry.id === lesson.topicId));
+    if (!theme) return;
+    setOpenThemes((prev) => new Set([...prev, theme.id]));
+    document.getElementById(`lesson-${lesson.topicId}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [lesson.topicId, plan]);
+
+  const canContinue = lesson.withoutPlan || Boolean(lesson.topicId);
+  const hasSelection = Boolean(lesson.topicId);
   const preview = hasSelection ? previewForLesson(lesson.topicId || "custom") : null;
   const placementHint =
     plan && lesson.isCreating
@@ -297,61 +307,177 @@ export function LessonPickScreen({
     });
   };
 
+  const syncLessonAfterPlanChange = (next: ThematicPlan) => {
+    onPlanChange(next);
+    if (!lesson.topicId) return;
+    const found = lessonInPlan(next, lesson.topicId);
+    if (!found) {
+      onLesson({ topicId: "", topic: "", isCreating: false, themeId: "", insertAfterLessonId: null });
+      return;
+    }
+    if (found.lesson.topic !== lesson.topic || found.theme.id !== lesson.themeId) {
+      onLesson({ topic: found.lesson.topic, themeId: found.theme.id });
+    }
+  };
+
+  const selectWithoutPlan = () => {
+    onLesson({
+      withoutPlan: true,
+      topicId: "",
+      topic: "Урок без привязки к тематическому плану",
+      isCreating: false,
+      themeId: "",
+      insertAfterLessonId: null,
+    });
+  };
+
+  const handleRemoveLesson = (lessonId: string) => {
+    if (!plan) return;
+    syncLessonAfterPlanChange(removeLessonFromPlan(plan, lessonId));
+  };
+
+  const handleAddLesson = (themeId: string, afterLessonId: string | null, topic: string) => {
+    if (!plan) return;
+    const { plan: nextPlan, lessonId } = addLessonToPlan(plan, themeId, afterLessonId, topic);
+    syncLessonAfterPlanChange(nextPlan);
+    const found = lessonInPlan(nextPlan, lessonId);
+    if (found) {
+      onLesson({
+        topicId: lessonId,
+        topic: found.lesson.topic,
+        themeId: found.theme.id,
+        isCreating: false,
+        withoutPlan: false,
+      });
+    }
+  };
+
+  const handleMoveLesson = (themeId: string, lessonId: string, direction: -1 | 1) => {
+    if (!plan) return;
+    syncLessonAfterPlanChange(moveLessonInTheme(plan, themeId, lessonId, direction));
+  };
+
   return (
     <div className="ta-pick">
       <div className="ta-pick__list">
-        <p className="wf-badge">Подготовка урока · шаг 3</p>
-        <h1 className="wf-h1">Выберите урок в тематическом планировании</h1>
-        <p className="wf-lead">
-          {pair.subject} · {pair.grade} класс · {pair.umk}
-          {profile.planFile ? ` · загружен ${profile.planFile}` : ""}
-        </p>
+        <p className="wf-badge">Подготовка урока</p>
+        <h1 className="wf-h1">Подготовка урока</h1>
+        <p className="wf-lead">Выберите предмет и параллель — тематический план подтянется автоматически.</p>
 
+        <p className="wf-card-kicker">Предмет</p>
         <div className="wf-row">
-          <WDropzone label="Загрузить свой КТП" fileName={profile.planFile} hint="Word, PDF, Excel" onPick={onUploadPlan} />
-          <WChip
-            selected={lesson.withoutPlan}
-            onClick={() =>
-              onLesson({
-                withoutPlan: true,
-                topicId: "",
-                topic: "Урок без привязки к КТП",
-                isCreating: false,
-                themeId: "",
-                insertAfterLessonId: null,
-              })
-            }
-          >
-            Урок без КТП
-          </WChip>
+          {SUBJECTS.map((subject) => (
+            <WChip key={subject} selected={draft.subject === subject} onClick={() => onDraft({ subject })}>
+              {subject}
+            </WChip>
+          ))}
         </div>
 
-        {plan ? (
-          <>
-            <p className="wf-card-kicker">
-              {plan.title} · {plan.hours} ч · {plan.frp}
-            </p>
-            <div className="ta-themes">
-              {plan.themes.map((theme) => (
-                <ThemeAccordion
-                  key={theme.id}
-                  theme={theme}
-                  expanded={openThemes.has(theme.id)}
-                  onToggle={() => toggleTheme(theme.id)}
-                  lesson={lesson}
-                  onLesson={onLesson}
-                  removedLessonIds={removedLessonIds}
-                  onRemoveLesson={onRemoveLesson}
-                />
-              ))}
+        <p className="wf-card-kicker">Класс / параллель</p>
+        <div className="wf-row">
+          {GRADES.map((grade) => (
+            <WChip key={grade} selected={draft.grade === grade} onClick={() => onDraft({ grade })}>
+              {grade}
+            </WChip>
+          ))}
+        </div>
+
+        <section className="ta-pick-lessons">
+          <p className="wf-card-kicker">Выбрать урок</p>
+
+          {!hasSubjectGrade ? (
+            <div className="wf-card ta-pick-lessons__empty">
+              <p className="wf-hint">Выберите предмет и параллель, чтобы увидеть список тем и уроков.</p>
             </div>
-          </>
-        ) : (
-          <div className="wf-card">
-            <p className="wf-card-title">Типовой КТП не найден</p>
-            <p className="wf-hint">Загрузите файл или создайте урок без привязки к КТП.</p>
-          </div>
-        )}
+          ) : otherSubject ? (
+            <div className="wf-card ta-pick-lessons__empty">
+              <p className="wf-hint">
+                Тематический план не предусмотрен, создайте урок без привязки к тематическому плану.
+              </p>
+              <div className="wf-row ta-pick-lessons__actions">
+                <WChip selected={lesson.withoutPlan} onClick={selectWithoutPlan}>
+                  Урок без тематического плана
+                </WChip>
+              </div>
+            </div>
+          ) : plan && filteredPlan ? (
+            <>
+              <div className="ta-pick-plan-head">
+                <p className="wf-card-kicker">
+                  {plan.title} · {plan.hours} ч · {plan.frp}
+                  {profile.planFile ? ` · загружен ${profile.planFile}` : ""}
+                </p>
+                <WButton variant="secondary" onClick={() => setPlanEditorOpen(true)}>
+                  Редактировать план
+                </WButton>
+              </div>
+
+              <div className="ta-pick-search">
+                <WInput
+                  placeholder="Поиск по названию урока или раздела"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+                {searchQuery ? (
+                  <p className="wf-hint ta-pick-search__meta">
+                    Найдено {visibleLessons} из {totalLessons} уроков
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="ta-themes">
+                {filteredPlan.themes.map((theme) => (
+                  <ThemeAccordion
+                    key={theme.id}
+                    theme={theme}
+                    expanded={openThemes.has(theme.id)}
+                    onToggle={() => toggleTheme(theme.id)}
+                    lesson={lesson}
+                    onLesson={onLesson}
+                    onRemoveLesson={handleRemoveLesson}
+                    onMoveLesson={handleMoveLesson}
+                    onAddLesson={handleAddLesson}
+                    searchQuery={searchQuery}
+                  />
+                ))}
+              </div>
+
+              {searchQuery && filteredPlan.themes.length === 0 ? (
+                <div className="wf-card ta-pick-lessons__empty">
+                  <p className="wf-hint">По запросу «{searchQuery}» уроки не найдены.</p>
+                </div>
+              ) : null}
+
+              <div className="wf-row ta-pick-lessons__actions">
+                <WDropzone
+                  label="Загрузить свой тематический план"
+                  fileName={profile.planFile}
+                  hint="Word, PDF, Excel"
+                  onPick={onUploadPlan}
+                />
+                <WChip selected={lesson.withoutPlan} onClick={selectWithoutPlan}>
+                  Урок без тематического плана
+                </WChip>
+              </div>
+            </>
+          ) : (
+            <div className="wf-card ta-pick-lessons__empty">
+              <p className="wf-card-title">Типовой тематический план не найден</p>
+              <p className="wf-hint">Загрузите файл или создайте урок без привязки к тематическому плану.</p>
+              <div className="wf-row ta-pick-lessons__actions">
+                <WDropzone
+                  label="Загрузить свой тематический план"
+                  fileName={profile.planFile}
+                  hint="Word, PDF, Excel"
+                  onPick={onUploadPlan}
+                />
+                <WChip selected={lesson.withoutPlan} onClick={selectWithoutPlan}>
+                  Урок без тематического плана
+                </WChip>
+              </div>
+            </div>
+          )}
+        </section>
 
         <div className="wf-footer-actions">
           <WButton variant="ghost" onClick={onBack}>
@@ -417,12 +543,23 @@ export function LessonPickScreen({
           <div className="ta-pick__preview-empty">
             <p className="wf-card-kicker">Превью урока</p>
             <p className="wf-hint">
-              Выберите урок из списка или загрузите свой КТП — здесь появится превью с целями, задачами и ключевыми
-              результатами.
+              Выберите урок из списка или загрузите свой тематический план — здесь появится превью с целями,
+              задачами и ключевыми результатами.
             </p>
           </div>
         )}
       </aside>
+
+      {planEditorOpen && plan ? (
+        <ThematicPlanEditModal
+          plan={plan}
+          onSave={(next) => {
+            syncLessonAfterPlanChange(next);
+            setPlanEditorOpen(false);
+          }}
+          onClose={() => setPlanEditorOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

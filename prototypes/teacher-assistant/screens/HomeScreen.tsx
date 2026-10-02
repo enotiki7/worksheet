@@ -42,11 +42,10 @@ export function HomeScreen({
             <p className="wf-card-kicker">Профиль</p>
             {profile.pairs.map((pair) => (
               <p key={pair.id} className="wf-meta">
-                {pair.subject} · {pair.grade} · {pair.umk}
+                {pair.subject} · {pair.grade} класс
               </p>
             ))}
-            {profile.scheduleFile ? <p className="wf-meta">Расписание: {profile.scheduleFile}</p> : null}
-            {profile.planFile ? <p className="wf-meta">КТП: {profile.planFile}</p> : null}
+            {profile.planFile ? <p className="wf-meta">Тематический план: {profile.planFile}</p> : null}
           </div>
         )}
       </aside>

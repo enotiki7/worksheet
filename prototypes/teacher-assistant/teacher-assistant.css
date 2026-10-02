@@ -929,9 +929,20 @@ textarea {
 
 .ta-lesson-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 8px;
   align-items: start;
+}
+
+.ta-lesson-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ta-lesson-reorder .wf-btn {
+  min-width: 36px;
+  padding-inline: 8px;
 }
 
 .ta-lesson-row .wf-card {
@@ -1053,10 +1064,16 @@ textarea {
 
 .ta-modal__dialog {
   width: min(480px, 100%);
+  max-height: calc(100vh - 48px);
   padding: 24px;
   border: 1px solid var(--wf-line-strong);
   background: var(--wf-surface);
   box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
+  overflow: auto;
+}
+
+.ta-modal__dialog.is-wide {
+  width: min(760px, 100%);
 }
 
 .ta-modal__title {
@@ -1095,6 +1112,108 @@ textarea {
 
 .ta-collect-plan {
   margin-top: 8px;
+}
+
+.ta-pick-plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ta-pick-search {
+  margin-bottom: 16px;
+}
+
+.ta-pick-search__meta {
+  margin-top: 6px;
+}
+
+.ta-pick-search__empty {
+  padding: 8px 0 0;
+}
+
+.ta-pick-lessons {
+  margin-top: 24px;
+}
+
+.ta-plan-editor__summary {
+  margin-bottom: 16px !important;
+}
+
+.ta-plan-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ta-plan-editor__theme {
+  padding-top: 12px;
+  border-top: 1px solid var(--wf-line);
+}
+
+.ta-plan-editor__theme-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ta-plan-editor__theme-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.ta-plan-editor__theme-meta {
+  font-size: 12px;
+  color: var(--wf-dim);
+}
+
+.ta-plan-editor__lesson {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ta-plan-editor__lesson-num {
+  font-size: 12px;
+  color: var(--wf-dim);
+  text-align: right;
+}
+
+.ta-plan-editor__lesson-hours {
+  font-size: 12px;
+  color: var(--wf-dim);
+  white-space: nowrap;
+}
+
+.ta-plan-editor__create-after,
+.ta-plan-editor__insert-after {
+  grid-column: 1 / -1;
+}
+
+.ta-pick-lessons__empty {
+  padding: 16px;
+}
+
+.ta-pick-lessons__actions {
+  margin-top: 12px;
+  align-items: flex-start;
+}
+
+.ta-edit__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--wf-line);
 }
 
 .ta-library {
