@@ -138,6 +138,10 @@ export const LESSON_OUTCOME = [
   "Критерии оценивания и рефлексия",
 ];
 
+export const PLAN_LESSON_KINDS = ["Новая тема", "Практикум", "Самостоятельная", "Контрольная"] as const;
+
+export type PlanLessonKind = (typeof PLAN_LESSON_KINDS)[number];
+
 export type KtpLesson = {
   id: string;
   number: number;
@@ -149,6 +153,10 @@ export type KtpLesson = {
   nextTopic?: string;
   createdMaterials?: MaterialId[];
 };
+
+export function formatLessonKind(lessonKind?: string) {
+  return lessonKind || "—";
+}
 
 export const DONE_LESSON_MATERIALS: MaterialId[] = ["presentation", "motivation", "classWork", "homework", "worksheet"];
 

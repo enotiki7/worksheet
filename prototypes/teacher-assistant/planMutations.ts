@@ -112,6 +112,14 @@ export function updateLessonTopic(plan: ThematicPlan, lessonId: string, topic: s
   return rechainPlan({ ...plan, themes });
 }
 
+export function updateLessonKind(plan: ThematicPlan, lessonId: string, lessonKind: string): ThematicPlan {
+  const themes = plan.themes.map((theme) => ({
+    ...theme,
+    lessons: theme.lessons.map((lesson) => (lesson.id === lessonId ? { ...lesson, lessonKind } : lesson)),
+  }));
+  return { ...plan, themes };
+}
+
 export function filterPlanByQuery(plan: ThematicPlan, query: string): ThematicPlan {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return plan;

@@ -8,6 +8,7 @@ import {
   SUBJECTS,
   isOtherSubject,
   lessonInPlan,
+  formatLessonKind,
   lessonStatusLabel,
   type KtpTheme,
   type ThematicPlan,
@@ -161,14 +162,7 @@ function ThemeAccordion({
               <div className="ta-lesson-row">
                 <WCard
                   selected={!lesson.isCreating && lesson.topicId === item.id}
-                  kicker={[
-                    `Урок ${item.number}`,
-                    `${item.hours} ч`,
-                    item.lessonKind,
-                    lessonStatusLabel(item.status),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  kicker={[`Урок ${item.number}`, `${item.hours} ч`, lessonStatusLabel(item.status)].join(" · ")}
                   title={item.topic}
                   detail={[item.prevTopic ? `← ${item.prevTopic}` : null, item.nextTopic ? `→ ${item.nextTopic}` : null]
                     .filter(Boolean)
@@ -183,6 +177,7 @@ function ThemeAccordion({
                     })
                   }
                 >
+                  <p className="ta-lesson-card__kind">Тип урока: {formatLessonKind(item.lessonKind)}</p>
                   {item.createdMaterials?.length ? <LessonMaterialIcons materials={item.createdMaterials} /> : null}
                 </WCard>
                 <div className="ta-lesson-reorder">

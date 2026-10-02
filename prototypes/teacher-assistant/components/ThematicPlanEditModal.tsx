@@ -4,11 +4,12 @@ import {
   clonePlan,
   moveLessonInTheme,
   removeLessonFromPlan,
+  updateLessonKind,
   updateLessonTopic,
 } from "../planMutations";
-import type { ThematicPlan } from "../mock";
+import { PLAN_LESSON_KINDS, formatLessonKind, type ThematicPlan } from "../mock";
 import { WireModal, WireModalActions } from "./WireModal";
-import { WButton, WInput } from "./wire";
+import { WButton, WChip, WInput } from "./wire";
 
 type Props = {
   plan: ThematicPlan;
@@ -90,10 +91,29 @@ export function ThematicPlanEditModal({ plan, onSave, onClose }: Props) {
               {theme.lessons.map((lesson, index) => (
                 <div key={lesson.id} className="ta-plan-editor__lesson">
                   <span className="ta-plan-editor__lesson-num">{lesson.number}</span>
-                  <WInput
-                    value={lesson.topic}
-                    onChange={(event) => apply(updateLessonTopic(draft, lesson.id, event.target.value))}
-                  />
+                  <div className="ta-plan-editor__lesson-main">
+                    <WInput
+                      value={lesson.topic}
+                      onChange={(event) => apply(updateLessonTopic(draft, lesson.id, event.target.value))}
+                    />
+                    <div className="ta-plan-editor__lesson-kind">
+                      <span className="ta-plan-editor__lesson-kind-label">Тип урока</span>
+                      <div className="wf-row">
+                        {PLAN_LESSON_KINDS.map((kind) => (
+                          <WChip
+                            key={kind}
+                            selected={lesson.lessonKind === kind}
+                            onClick={() => apply(updateLessonKind(draft, lesson.id, kind))}
+                          >
+                            {kind}
+                          </WChip>
+                        ))}
+                      </div>
+                      {lesson.lessonKind && !PLAN_LESSON_KINDS.includes(lesson.lessonKind as (typeof PLAN_LESSON_KINDS)[number]) ? (
+                        <p className="wf-hint">Сейчас: {formatLessonKind(lesson.lessonKind)}</p>
+                      ) : null}
+                    </div>
+                  </div>
                   <span className="ta-plan-editor__lesson-hours">{lesson.hours} ч</span>
                   <div className="ta-lesson-reorder">
                     <WButton

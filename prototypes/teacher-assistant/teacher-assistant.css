@@ -949,6 +949,13 @@ textarea {
   min-width: 0;
 }
 
+.ta-lesson-card__kind {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--wf-dim);
+  text-align: left;
+}
+
 .ta-lesson-delete {
   padding: 8px 12px;
   border: 1px solid var(--wf-line-strong);
@@ -1178,8 +1185,26 @@ textarea {
   display: grid;
   grid-template-columns: 32px 1fr auto auto auto;
   gap: 8px;
-  align-items: center;
+  align-items: start;
   margin-bottom: 8px;
+}
+
+.ta-plan-editor__lesson-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ta-plan-editor__lesson-kind-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--wf-dim);
+}
+
+.ta-plan-editor__lesson-kind .wf-row {
+  flex-wrap: wrap;
 }
 
 .ta-plan-editor__lesson-num {
