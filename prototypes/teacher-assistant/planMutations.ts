@@ -104,6 +104,25 @@ export function moveLessonInTheme(
   return rechainPlan({ ...plan, themes });
 }
 
+export function mergeLessonsInPlan(plan: ThematicPlan, lessonId: string): ThematicPlan {
+  const themes = plan.themes.map((theme) => {
+    const index = theme.lessons.findIndex((lesson) => lesson.id === lessonId);
+    if (index < 0 || index >= theme.lessons.length - 1) return theme;
+    const current = theme.lessons[index];
+    const next = theme.lessons[index + 1];
+    const merged: KtpLesson = {
+      ...current,
+      topic: `${current.topic} · ${next.topic}`,
+      hours: current.hours + next.hours,
+      lessonKind: current.lessonKind || next.lessonKind,
+    };
+    const lessons = [...theme.lessons];
+    lessons.splice(index, 2, merged);
+    return { ...theme, lessons };
+  });
+  return rechainPlan({ ...plan, themes });
+}
+
 export function updateLessonTopic(plan: ThematicPlan, lessonId: string, topic: string): ThematicPlan {
   const themes = plan.themes.map((theme) => ({
     ...theme,

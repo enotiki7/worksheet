@@ -18,6 +18,7 @@ export type TeachingPair = {
   id: string;
   subject: string;
   grade: string;
+  classLetter?: string;
   umk: string;
 };
 
@@ -57,7 +58,6 @@ export type LibraryMaterial = {
 };
 
 export type Scenario =
-  | "full-onboarding"
   | "skipped"
   | "multi-subject"
   | "materials-at-pick"

@@ -93,6 +93,25 @@ export function HomeScreen({
             ))}
           </div>
         </section>
+
+        <section className="ta-home__schedule">
+          <p className="wf-card-kicker">Расписание</p>
+          {profile.scheduleFile ? (
+            <WCard kicker="Загружено" title={profile.scheduleFile} detail="Расписание учебной недели доступно для планирования уроков." />
+          ) : (
+            <div className="ta-home__schedule-empty">
+              <p className="wf-hint">Загрузите расписание или создайте вручную</p>
+              <div className="wf-row">
+                <WButton variant="secondary" disabled>
+                  Загрузить расписание
+                </WButton>
+                <WButton variant="ghost" disabled>
+                  Создать вручную
+                </WButton>
+              </div>
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

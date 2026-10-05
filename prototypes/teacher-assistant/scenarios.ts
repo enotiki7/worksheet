@@ -2,7 +2,6 @@ import type { Scenario, UserProfile } from "./types";
 import { DEFAULT_PAIR } from "./mock";
 
 export const scenarios: Scenario[] = [
-  "full-onboarding",
   "skipped",
   "multi-subject",
   "materials-at-pick",
@@ -19,7 +18,6 @@ export function isMaterialsScenario(scenario: Scenario) {
 }
 
 export const SCENARIO_LABELS: Record<Scenario, string> = {
-  "full-onboarding": "full-onboarding",
   skipped: "skipped",
   "multi-subject": "multi-subject",
   "materials-at-pick": "materials-at-pick (на выборе урока)",
@@ -35,7 +33,7 @@ export function attachPointForScenario(scenario: Scenario) {
 
 export function getScenario(value: string | null): Scenario {
   if (value && scenarios.includes(value as Scenario)) return value as Scenario;
-  return "full-onboarding";
+  return "skipped";
 }
 
 export function profileForScenario(scenario: Scenario): UserProfile {

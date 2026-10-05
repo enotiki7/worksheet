@@ -134,31 +134,7 @@ export function Prototype() {
     const needsSeed = ["home", "lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace"].includes(screen);
     if (!needsSeed || profile.pairs.length > 0) return;
 
-    if (scenario === "full-onboarding") {
-      setProfile({
-        phone: "+7 903 555-12-34",
-        roles: ["subject"],
-        pairs: [{ ...DEFAULT_PAIR, id: "pair-1" }],
-        scheduleFile: null,
-        planFile: null,
-        skippedOnboarding: false,
-        completedSteps: 2,
-      });
-      setPickDraft({ id: "pick", subject: DEFAULT_PAIR.subject, grade: DEFAULT_PAIR.grade, umk: DEFAULT_PAIR.umk });
-      setLesson((prev) => ({
-        ...prev,
-        pairId: "pair-1",
-        topicId: "l2",
-        topic: "Иррациональные числа. Множество действительных чисел",
-        themeId: "t1",
-        isCreating: false,
-        withoutPlan: false,
-        attachedLibraryIds: [],
-      }));
-      return;
-    }
-
-    if (!isMaterialsScenario(scenario)) return;
+    if (!isMaterialsScenario(scenario) && !isNextLessonScenario(scenario)) return;
 
     const point = attachPointForScenario(scenario);
     setProfile((prev) => ({
@@ -282,7 +258,11 @@ export function Prototype() {
   };
 
   const handlePickDraft = (patch: Partial<TeachingPair>) => {
-    setPickDraft((prev) => ({ ...prev, ...patch }));
+    setPickDraft((prev) => ({
+      ...prev,
+      ...patch,
+      ...(patch.grade !== undefined && patch.classLetter === undefined && !prev.classLetter ? { classLetter: "А" } : {}),
+    }));
     if (patch.subject !== undefined || patch.grade !== undefined) {
       setLesson((prev) => ({
         ...emptyLesson(),
