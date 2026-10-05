@@ -121,9 +121,36 @@ export function Prototype() {
   }, [planKey, scenario, pickDraft.subject, pickDraft.grade]);
 
   useEffect(() => {
-    if (!figmaCapture || !isMaterialsScenario(scenario)) return;
-    const needsPair = ["lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace"].includes(screen);
-    if (!needsPair || profile.pairs.length > 0) return;
+    if (!figmaCapture) return;
+
+    const needsSeed = ["home", "lesson-pick", "lesson-edit", "lesson-generating", "lesson-workspace"].includes(screen);
+    if (!needsSeed || profile.pairs.length > 0) return;
+
+    if (scenario === "full-onboarding") {
+      setProfile({
+        phone: "+7 903 555-12-34",
+        roles: ["subject"],
+        pairs: [{ ...DEFAULT_PAIR, id: "pair-1" }],
+        scheduleFile: null,
+        planFile: null,
+        skippedOnboarding: false,
+        completedSteps: 2,
+      });
+      setPickDraft({ id: "pick", subject: DEFAULT_PAIR.subject, grade: DEFAULT_PAIR.grade, umk: DEFAULT_PAIR.umk });
+      setLesson((prev) => ({
+        ...prev,
+        pairId: "pair-1",
+        topicId: "l2",
+        topic: "Иррациональные числа. Множество действительных чисел",
+        themeId: "t1",
+        isCreating: false,
+        withoutPlan: false,
+        attachedLibraryIds: [],
+      }));
+      return;
+    }
+
+    if (!isMaterialsScenario(scenario)) return;
 
     const point = attachPointForScenario(scenario);
     setProfile((prev) => ({

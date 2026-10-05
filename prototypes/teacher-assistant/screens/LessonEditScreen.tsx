@@ -1,8 +1,9 @@
 import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
-import { LESSON_TYPES, MATERIAL_LABELS, regenerateLessonPlan } from "../lessonContent";
+import { MaterialGenerationCards } from "../components/MaterialGenerationCards";
+import { LESSON_TYPES, regenerateLessonPlan } from "../lessonContent";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
 import { WireAiPanel } from "../components/WireAiPanel";
-import { WButton, WCheck, WChip } from "../components/wire";
+import { WButton, WChip } from "../components/wire";
 import type { LessonContent, LessonStep, LessonType, LibraryMaterial, MaterialId } from "../types";
 
 type Props = {
@@ -237,16 +238,7 @@ export function LessonEditScreen({
 
           <section className="ta-section">
             <h2 className="ta-section__title">Материалы для генерации</h2>
-            <div className="ta-materials">
-              {MATERIAL_LABELS.map(({ id, label }) => (
-                <WCheck
-                  key={id}
-                  checked={content.materials[id]}
-                  onChange={(checked) => toggleMaterial(id, checked)}
-                  label={label}
-                />
-              ))}
-            </div>
+            <MaterialGenerationCards selected={content.materials} onToggle={toggleMaterial} />
           </section>
 
           {showLibraryAttach && libraryMaterials && onToggleLibrary ? (

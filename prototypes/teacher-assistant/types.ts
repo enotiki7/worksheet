@@ -72,7 +72,9 @@ export type MaterialId =
   | "motivation"
   | "classWork"
   | "homework"
-  | "worksheet";
+  | "worksheet"
+  | "trainer"
+  | "quiz";
 
 export type LessonStep = {
   id: string;

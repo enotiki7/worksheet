@@ -154,9 +154,6 @@ function ThemeAccordion({
                   selected={!lesson.isCreating && lesson.topicId === item.id}
                   kicker={[`Урок ${item.number}`, `${item.hours} ч`, lessonStatusLabel(item.status)].join(" · ")}
                   title={item.topic}
-                  detail={[item.prevTopic ? `← ${item.prevTopic}` : null, item.nextTopic ? `→ ${item.nextTopic}` : null]
-                    .filter(Boolean)
-                    .join(" · ")}
                   onClick={() =>
                     onLesson({
                       topicId: item.id,
@@ -245,6 +242,7 @@ export function LessonPickScreen({
   const canContinue = lesson.withoutPlan || Boolean(lesson.topicId);
   const hasSelection = Boolean(lesson.topicId);
   const preview = hasSelection ? previewForLesson(lesson.topicId || "custom") : null;
+  const selectedInPlan = plan && lesson.topicId ? lessonInPlan(plan, lesson.topicId) : null;
   const placementHint =
     plan && lesson.isCreating
       ? (() => {
@@ -441,6 +439,11 @@ export function LessonPickScreen({
           <>
             <p className="wf-card-kicker">Превью урока</p>
             <h2 className="wf-h2">{lesson.topic}</h2>
+            {selectedInPlan ? (
+              <p className="ta-preview-meta">
+                Тип урока: {formatLessonKind(selectedInPlan.lesson.lessonKind)} · Тема: {selectedInPlan.theme.title}
+              </p>
+            ) : null}
             {placementHint ? <p className="wf-hint">{placementHint}</p> : null}
 
             <section className="ta-preview-block">

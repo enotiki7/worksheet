@@ -77,6 +77,8 @@ export function defaultMaterials(): Record<MaterialId, boolean> {
     classWork: true,
     homework: true,
     worksheet: true,
+    trainer: false,
+    quiz: false,
   };
 }
 
@@ -161,14 +163,24 @@ export function buildLessonContent(lessonId: string, topic: string): LessonConte
   };
 }
 
-export const MATERIAL_LABELS: { id: MaterialId; label: string }[] = [
-  { id: "presentation", label: "Презентация к уроку" },
+export type MaterialOption = {
+  id: MaterialId;
+  label: string;
+  metaLabel?: string;
+};
+
+export const MATERIAL_OPTIONS: MaterialOption[] = [
+  { id: "presentation", label: "Презентация к уроку", metaLabel: "12 слайдов" },
   { id: "infographic", label: "Инфографика" },
   { id: "motivation", label: "Мотивирующее задание" },
-  { id: "classWork", label: "Задание для классной работы" },
-  { id: "homework", label: "Задание для домашней работы" },
-  { id: "worksheet", label: "Рабочий лист" },
+  { id: "classWork", label: "Задание для классной работы", metaLabel: "5 заданий" },
+  { id: "homework", label: "Задание для домашней работы", metaLabel: "3 задания" },
+  { id: "worksheet", label: "Рабочий лист", metaLabel: "6 заданий" },
+  { id: "trainer", label: "Тренажёр", metaLabel: "10 заданий" },
+  { id: "quiz", label: "Викторина", metaLabel: "8 заданий" },
 ];
+
+export const MATERIAL_LABELS = MATERIAL_OPTIONS.map(({ id, label }) => ({ id, label }));
 
 export const EDIT_SUGGESTS = [
   "Сократить цель урока",
