@@ -474,23 +474,35 @@ textarea {
   font-weight: 500;
 }
 
+.wf-app:has(.ta-pick) {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .ta-pick {
   flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
   min-height: 0;
+  overflow: hidden;
+}
+
+.ta-pick__list,
+.ta-pick__preview {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .ta-pick__list {
   padding: 32px 28px 64px;
-  overflow: auto;
 }
 
 .ta-pick__preview {
   padding: 32px 24px;
   border-left: 1px solid var(--wf-line);
   background: var(--wf-muted);
-  overflow: auto;
 }
 
 .ta-pick__preview-empty {
@@ -929,7 +941,7 @@ textarea {
 
 .ta-lesson-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr;
   gap: 8px;
   align-items: start;
 }
@@ -1303,6 +1315,7 @@ textarea {
   .ta-edit__layout,
   .ta-workspace__layout {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .ta-pick__preview,

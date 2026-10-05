@@ -13,13 +13,7 @@ import {
   type KtpTheme,
   type ThematicPlan,
 } from "../mock";
-import {
-  addLessonToPlan,
-  countPlanLessons,
-  filterPlanByQuery,
-  moveLessonInTheme,
-  removeLessonFromPlan,
-} from "../planMutations";
+import { addLessonToPlan, countPlanLessons, filterPlanByQuery } from "../planMutations";
 import type { LessonDraft, LibraryMaterial, TeachingPair, UserProfile } from "../types";
 import { WButton, WCard, WChip, WDropzone, WInput } from "../components/wire";
 
@@ -69,8 +63,6 @@ function ThemeAccordion({
   onToggle,
   lesson,
   onLesson,
-  onRemoveLesson,
-  onMoveLesson,
   onAddLesson,
   searchQuery,
 }: {
@@ -79,8 +71,6 @@ function ThemeAccordion({
   onToggle: () => void;
   lesson: LessonDraft;
   onLesson: (patch: Partial<LessonDraft>) => void;
-  onRemoveLesson: (lessonId: string) => void;
-  onMoveLesson: (themeId: string, lessonId: string, direction: -1 | 1) => void;
   onAddLesson: (themeId: string, afterLessonId: string | null, topic: string) => void;
   searchQuery: string;
 }) {
@@ -157,7 +147,7 @@ function ThemeAccordion({
         <div className="ta-accordion__body">
           {!searchQuery ? renderInsert(null, "Новый урок в начале темы") : null}
 
-          {theme.lessons.map((item, index) => (
+          {theme.lessons.map((item) => (
             <div key={item.id} className="ta-lesson-slot" id={`lesson-${item.id}`}>
               <div className="ta-lesson-row">
                 <WCard
@@ -180,32 +170,6 @@ function ThemeAccordion({
                   <p className="ta-lesson-card__kind">Тип урока: {formatLessonKind(item.lessonKind)}</p>
                   {item.createdMaterials?.length ? <LessonMaterialIcons materials={item.createdMaterials} /> : null}
                 </WCard>
-                <div className="ta-lesson-reorder">
-                  <WButton
-                    variant="ghost"
-                    onClick={() => onMoveLesson(theme.id, item.id, -1)}
-                    disabled={index === 0}
-                    aria-label={`Переместить «${item.topic}» выше`}
-                  >
-                    ↑
-                  </WButton>
-                  <WButton
-                    variant="ghost"
-                    onClick={() => onMoveLesson(theme.id, item.id, 1)}
-                    disabled={index === theme.lessons.length - 1}
-                    aria-label={`Переместить «${item.topic}» ниже`}
-                  >
-                    ↓
-                  </WButton>
-                </div>
-                <button
-                  type="button"
-                  className="ta-lesson-delete"
-                  aria-label={`Удалить урок «${item.topic}»`}
-                  onClick={() => onRemoveLesson(item.id)}
-                >
-                  Удалить
-                </button>
               </div>
               {!searchQuery ? renderInsert(item.id, `Новый урок после «${item.topic}»`) : null}
             </div>
@@ -326,11 +290,6 @@ export function LessonPickScreen({
     });
   };
 
-  const handleRemoveLesson = (lessonId: string) => {
-    if (!plan) return;
-    syncLessonAfterPlanChange(removeLessonFromPlan(plan, lessonId));
-  };
-
   const handleAddLesson = (themeId: string, afterLessonId: string | null, topic: string) => {
     if (!plan) return;
     const { plan: nextPlan, lessonId } = addLessonToPlan(plan, themeId, afterLessonId, topic);
@@ -345,11 +304,6 @@ export function LessonPickScreen({
         withoutPlan: false,
       });
     }
-  };
-
-  const handleMoveLesson = (themeId: string, lessonId: string, direction: -1 | 1) => {
-    if (!plan) return;
-    syncLessonAfterPlanChange(moveLessonInTheme(plan, themeId, lessonId, direction));
   };
 
   return (
@@ -429,8 +383,6 @@ export function LessonPickScreen({
                     onToggle={() => toggleTheme(theme.id)}
                     lesson={lesson}
                     onLesson={onLesson}
-                    onRemoveLesson={handleRemoveLesson}
-                    onMoveLesson={handleMoveLesson}
                     onAddLesson={handleAddLesson}
                     searchQuery={searchQuery}
                   />
