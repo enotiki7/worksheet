@@ -32,7 +32,7 @@ export type UserProfile = {
   completedSteps: number;
 };
 
-export type LessonType = "newTopic" | "practice" | "independent" | "control";
+export type LessonType = "newTopic" | "motivation" | "practice" | "independent" | "control";
 
 export type LessonDraft = {
   pairId: string;

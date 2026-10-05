@@ -2,6 +2,7 @@ import type { LessonContent, LessonType, MaterialId } from "./types";
 
 export const LESSON_TYPES: { id: LessonType; label: string }[] = [
   { id: "newTopic", label: "Новая тема" },
+  { id: "motivation", label: "Мотивация" },
   { id: "practice", label: "Практика" },
   { id: "independent", label: "Самостоятельная работа" },
   { id: "control", label: "Контрольная работа" },

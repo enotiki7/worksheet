@@ -138,7 +138,7 @@ export const LESSON_OUTCOME = [
   "Критерии оценивания и рефлексия",
 ];
 
-export const PLAN_LESSON_KINDS = ["Новая тема", "Практикум", "Самостоятельная", "Контрольная"] as const;
+export const PLAN_LESSON_KINDS = ["Новая тема", "Мотивация", "Практикум", "Самостоятельная", "Контрольная"] as const;
 
 export type PlanLessonKind = (typeof PLAN_LESSON_KINDS)[number];
 
