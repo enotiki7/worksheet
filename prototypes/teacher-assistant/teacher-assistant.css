@@ -490,7 +490,9 @@ textarea {
   font-weight: 500;
 }
 
-.wf-app:has(.ta-pick) {
+.wf-app:has(.ta-pick),
+.wf-app:has(.ta-edit),
+.wf-app:has(.ta-workspace) {
   height: 100vh;
   min-height: 0;
   overflow: hidden;
@@ -562,10 +564,6 @@ textarea {
   width: 100%;
 }
 
-.ta-plan-editor__lesson {
-  cursor: pointer;
-}
-
 .ta-preview-meta {
   margin: 8px 0 16px;
   font-size: 13px;
@@ -608,6 +606,7 @@ textarea {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .ta-edit__header,
@@ -634,12 +633,22 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .ta-edit__main,
 .ta-workspace__main {
   padding: 24px 28px 48px;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ta-edit__layout > .ta-ai-panel,
+.ta-workspace__layout > .ta-ai-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .ta-section + .ta-section {
@@ -852,7 +861,6 @@ textarea {
   padding: 20px 16px;
   border-left: 1px solid var(--wf-line);
   background: var(--wf-muted);
-  overflow: auto;
 }
 
 .ta-ai-panel__title {
@@ -1332,11 +1340,22 @@ textarea {
   padding: 12px;
   border: 1px solid var(--wf-line);
   background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ta-plan-editor__lesson:hover {
+  border-color: var(--wf-line-strong);
 }
 
 .ta-plan-editor__lesson.is-selected {
   border-color: var(--wf-text);
   background: var(--wf-draft);
+}
+
+.ta-plan-editor__lesson:focus-visible {
+  outline: 2px solid var(--wf-text);
+  outline-offset: 2px;
 }
 
 .ta-plan-editor__lesson-select {
@@ -1479,7 +1498,10 @@ textarea {
   }
 
   .ta-pick__plan,
-  .ta-ai-panel {
+  .ta-edit__main,
+  .ta-workspace__main,
+  .ta-edit__layout > .ta-ai-panel,
+  .ta-workspace__layout > .ta-ai-panel {
     border-left: 0;
     border-top: 1px solid var(--wf-line);
   }

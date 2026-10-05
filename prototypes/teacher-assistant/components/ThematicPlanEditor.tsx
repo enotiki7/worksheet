@@ -128,16 +128,17 @@ export function ThematicPlanEditor({ plan, onChange, selectedLessonId, onSelectL
                       }}
                       role="button"
                       tabIndex={0}
+                      aria-pressed={isSelected}
                     >
                       <span className="ta-plan-editor__lesson-num">{lesson.number}</span>
-                      <div
-                        className="ta-plan-editor__lesson-main"
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
-                      >
+                      <div className="ta-plan-editor__lesson-main">
                         <WInput
                           value={lesson.topic}
                           onChange={(event) => apply(updateLessonTopic(plan, lesson.id, event.target.value))}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelectLesson?.(lesson.id, lesson.topic, theme.id);
+                          }}
                           onFocus={() => onSelectLesson?.(lesson.id, lesson.topic, theme.id)}
                         />
                         <div className="ta-plan-editor__lesson-kind">
@@ -147,7 +148,11 @@ export function ThematicPlanEditor({ plan, onChange, selectedLessonId, onSelectL
                               <WChip
                                 key={kind}
                                 selected={lesson.lessonKind === kind}
-                                onClick={() => apply(updateLessonKind(plan, lesson.id, kind))}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onSelectLesson?.(lesson.id, lesson.topic, theme.id);
+                                  apply(updateLessonKind(plan, lesson.id, kind));
+                                }}
                               >
                                 {kind}
                               </WChip>
@@ -160,11 +165,7 @@ export function ThematicPlanEditor({ plan, onChange, selectedLessonId, onSelectL
                         </div>
                       </div>
                       <span className="ta-plan-editor__lesson-hours">{lesson.hours} ч</span>
-                      <div
-                        className="ta-plan-editor__lesson-actions"
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) => event.stopPropagation()}
-                      >
+                      <div className="ta-plan-editor__lesson-actions" onClick={(event) => event.stopPropagation()}>
                         <div className="ta-lesson-reorder">
                           <WButton
                             variant="ghost"
