@@ -96,7 +96,7 @@ export function WChip({
   children,
 }: {
   selected?: boolean;
-  onClick?: () => void;
+  onClick?: ButtonHTMLAttributes<HTMLButtonElement>["onClick"];
   children: ReactNode;
 }) {
   return (

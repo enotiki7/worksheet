@@ -4,7 +4,7 @@ import { ThematicPlanEditor } from "../components/ThematicPlanEditor";
 import { GRADES, SUBJECTS, isOtherSubject, lessonInPlan, type ThematicPlan } from "../mock";
 import { countPlanLessons, filterPlanByQuery } from "../planMutations";
 import type { LessonDraft, LibraryMaterial, TeachingPair, UserProfile } from "../types";
-import { WButton, WChip, WDropzone, WInput } from "../components/wire";
+import { WButton, WCard, WChip, WDropzone, WInput } from "../components/wire";
 
 export function LessonContextScreen({
   pairs,
