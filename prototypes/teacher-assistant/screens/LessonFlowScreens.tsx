@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExistingMaterialsPanel } from "../components/ExistingMaterialsPanel";
-import { LessonMaterialIcons } from "../components/LessonMaterialIcons";
+import { LessonPlanCard } from "../components/LessonPlanCard";
 import { ThematicPlanEditModal } from "../components/ThematicPlanEditModal";
 import { previewForLesson } from "../lessonContent";
 import {
@@ -9,7 +9,6 @@ import {
   isOtherSubject,
   lessonInPlan,
   formatLessonKind,
-  lessonStatusLabel,
   type KtpTheme,
   type ThematicPlan,
 } from "../mock";
@@ -150,10 +149,9 @@ function ThemeAccordion({
           {theme.lessons.map((item) => (
             <div key={item.id} className="ta-lesson-slot" id={`lesson-${item.id}`}>
               <div className="ta-lesson-row">
-                <WCard
+                <LessonPlanCard
+                  lesson={item}
                   selected={!lesson.isCreating && lesson.topicId === item.id}
-                  kicker={[`Урок ${item.number}`, `${item.hours} ч`, lessonStatusLabel(item.status)].join(" · ")}
-                  title={item.topic}
                   onClick={() =>
                     onLesson({
                       topicId: item.id,
@@ -163,10 +161,7 @@ function ThemeAccordion({
                       withoutPlan: false,
                     })
                   }
-                >
-                  <p className="ta-lesson-card__kind">Тип урока: {formatLessonKind(item.lessonKind)}</p>
-                  {item.createdMaterials?.length ? <LessonMaterialIcons materials={item.createdMaterials} /> : null}
-                </WCard>
+                />
               </div>
               {!searchQuery ? renderInsert(item.id, `Новый урок после «${item.topic}»`) : null}
             </div>

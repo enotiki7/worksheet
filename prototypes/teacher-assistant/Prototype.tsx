@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PrototypeControls } from "./components/PrototypeControls";
-import { DEFAULT_PAIR, libraryForPair, umkForSubject, isOtherSubject, planForPick, type ThematicPlan } from "./mock";
+import {
+  DEFAULT_PAIR,
+  libraryForPair,
+  umkForSubject,
+  isOtherSubject,
+  nextLessonInPlan,
+  planForPick,
+  type ThematicPlan,
+} from "./mock";
 import { clonePlan } from "./planMutations";
 import {
   attachPointForScenario,
@@ -312,6 +320,26 @@ export function Prototype() {
     setScreen("lesson-pick");
   };
 
+  const nextLesson =
+    activePlan && lesson.topicId && !lesson.withoutPlan ? nextLessonInPlan(activePlan, lesson.topicId) : null;
+
+  const prepareNextLesson = () => {
+    if (!nextLesson) {
+      prepareAnotherLesson();
+      return;
+    }
+    const pairId = lesson.pairId || profile.pairs[0]?.id || "";
+    setLesson({
+      ...emptyLesson(),
+      pairId,
+      topicId: nextLesson.lesson.id,
+      topic: nextLesson.lesson.topic,
+      themeId: nextLesson.theme.id,
+    });
+    setLessonContent(null);
+    setScreen("lesson-pick");
+  };
+
   const fillGap = (gap: string) => {
     if (gap.includes("роль")) setScreen("onboarding-1");
     else setScreen("onboarding-2");
@@ -459,7 +487,9 @@ export function Prototype() {
         onChange={setLessonContent}
         onBack={() => setScreen("lesson-edit")}
         onPrepareAnother={prepareAnotherLesson}
+        onPrepareNextLesson={prepareNextLesson}
         onScheduleLesson={() => setScreen("home")}
+        nextLesson={nextLesson}
         libraryMaterials={libraryMaterials}
         attachedLibraryIds={lesson.attachedLibraryIds}
       />

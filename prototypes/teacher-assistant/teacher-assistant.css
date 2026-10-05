@@ -1181,6 +1181,23 @@ textarea {
   color: var(--wf-dim);
 }
 
+.ta-modal__next-lesson {
+  margin-top: 20px;
+}
+
+.ta-modal__next-lesson-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--wf-text);
+}
+
+.ta-modal__next-lesson .wf-card {
+  width: 100%;
+  text-align: left;
+}
+
 .ta-modal__actions {
   display: flex;
   flex-wrap: wrap;

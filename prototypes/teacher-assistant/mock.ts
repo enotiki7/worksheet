@@ -274,6 +274,17 @@ export function lessonInPlan(plan: ThematicPlan, lessonId: string) {
   return null;
 }
 
+export function nextLessonInPlan(plan: ThematicPlan, lessonId: string) {
+  let afterCurrent = false;
+  for (const theme of plan.themes) {
+    for (const lesson of theme.lessons) {
+      if (afterCurrent) return { theme, lesson };
+      if (lesson.id === lessonId) afterCurrent = true;
+    }
+  }
+  return null;
+}
+
 export function planForPair(pair: TeachingPair) {
   return THEMATIC_PLANS.find(
     (item) => item.subject === pair.subject && item.grade === pair.grade && item.umk === pair.umk,

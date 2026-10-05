@@ -4,7 +4,9 @@ import { LIBRARY_TYPE_LABELS } from "../mock";
 import { EditableBlock, WireWysiwyg } from "../components/WireWysiwyg";
 import { WireAiPanel } from "../components/WireAiPanel";
 import { WireModal, WireModalActions } from "../components/WireModal";
+import { LessonPlanCard } from "../components/LessonPlanCard";
 import { WButton } from "../components/wire";
+import type { KtpLesson, KtpTheme } from "../mock";
 import type { LessonContent, LibraryMaterial, WorkspaceTab } from "../types";
 
 type Props = {
@@ -13,7 +15,9 @@ type Props = {
   onChange: (content: LessonContent) => void;
   onBack: () => void;
   onPrepareAnother: () => void;
+  onPrepareNextLesson?: () => void;
   onScheduleLesson: () => void;
+  nextLesson?: { theme: KtpTheme; lesson: KtpLesson } | null;
   libraryMaterials?: LibraryMaterial[];
   attachedLibraryIds?: string[];
 };
@@ -30,7 +34,9 @@ export function LessonWorkspaceScreen({
   onChange,
   onBack,
   onPrepareAnother,
+  onPrepareNextLesson,
   onScheduleLesson,
+  nextLesson,
   libraryMaterials,
   attachedLibraryIds = [],
 }: Props) {
@@ -60,6 +66,7 @@ export function LessonWorkspaceScreen({
 
       {savedOpen ? (
         <WireModal
+          size={nextLesson ? "wide" : "default"}
           onClose={() => setSavedOpen(false)}
           actions={
             <WireModalActions
@@ -81,6 +88,18 @@ export function LessonWorkspaceScreen({
             Ура! Первый урок подготовлен! Ачивка «Урокодел» получена и сохранена у вас в профиле. Что хотите сделать с
             уроком?
           </p>
+          {nextLesson ? (
+            <section className="ta-modal__next-lesson">
+              <h3 className="ta-modal__next-lesson-title">Подготовить следующий урок</h3>
+              <LessonPlanCard
+                lesson={{ ...nextLesson.lesson, status: "next" }}
+                onClick={() => {
+                  setSavedOpen(false);
+                  onPrepareNextLesson?.();
+                }}
+              />
+            </section>
+          ) : null}
         </WireModal>
       ) : null}
 
